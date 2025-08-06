@@ -1,0 +1,60 @@
+# =================================================================
+# 운영체제 및 일반 파일 (Operating System & General)
+# =================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+*.log
+*.tmp
+
+# =================================================================
+# IDE 및 에디터 설정 파일 (IDE & Editor)
+# =================================================================
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# =================================================================
+# 프론트엔드: Next.js (client/ 폴더 내부)
+# =================================================================
+client/node_modules/
+client/.next/
+client/out/
+client/build/
+
+# 환경 변수 파일 (중요: 비밀 키 등을 포함하므로 절대 공유하면 안 됩니다)
+client/.env
+client/.env*.local
+
+# 로그 파일
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/pnpm-debug.log*
+
+# =================================================================
+# 백엔드: Python / FastAPI (server/ 폴더 내부)
+# =================================================================
+
+# 가상환경 폴더 (스크린샷에 보이는 'env' 폴더)
+server/env/
+server/venv/
+
+# Python 캐시 파일
+server/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 환경 변수 파일
+server/.env
+
+# 기타 Python 관련 캐시
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
