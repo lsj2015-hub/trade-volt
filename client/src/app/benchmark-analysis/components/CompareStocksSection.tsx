@@ -11,7 +11,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from 'recharts';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -62,14 +61,10 @@ const INDEX_OPTIONS: Record<string, { name: string; ticker: string }[]> = {
   ],
 };
 
-const CustomTooltip = ({
-  active,
-  payload,
-  label,
-}: TooltipProps<number, string>) => {
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const filteredPayload = payload.filter(
-      (p) => p.name !== '기준 (100)' && p.value !== null
+      (p: any) => p.name !== '기준 (100)' && p.value !== null
     );
     if (filteredPayload.length === 0) return null;
 
@@ -173,7 +168,6 @@ export function CompareStocksSection() {
         }
         const placeholder: StockComparisonDataPoint = { date: dateString };
         response.series.forEach((series) => {
-          // ✅ 에러 수정: `(series: any)`와 같은 불안정한 타입 캐스팅 제거
           placeholder[series.dataKey] = null;
         });
         return placeholder;

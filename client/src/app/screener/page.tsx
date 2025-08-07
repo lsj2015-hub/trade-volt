@@ -22,9 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import {
-  MultiSelect
-} from '@/components/ui/multi-select';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 import {
   debtOptions,
