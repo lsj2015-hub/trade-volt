@@ -1,0 +1,22 @@
+fastapi
+uvicorn
+yfinance
+pandas
+python-dotenv
+pykrx
+deep_translator
+cachetools
+matplotlib
+requests
+cachetools
+httpx
+pydantic[email]
+pydantic-settings
+finance-datareader
+openai~=1.0 # 최신 버전의 OpenAI 라이브러리 (버전에 따라 호환성 유의)
+
+
+
+
+
+

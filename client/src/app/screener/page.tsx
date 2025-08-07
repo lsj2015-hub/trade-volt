@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Info, List, ListFilter } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -11,7 +14,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge, BadgeProps } from '@/components/ui/badge';
-import { Info, List, ListFilter } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -23,12 +25,20 @@ import { Button } from '@/components/ui/button';
 import {
   MultiSelect
 } from '@/components/ui/multi-select';
-import { EvaluationTable } from '@/components/evaluation-table';
-import { debtOptions, evaluationData, evaluationItems, growthOptions, perOptions, revenueOptions, sectorOptions } from '@/data/evaluation-criteria';
-import { CompanyEvaluationTable } from '@/components/company-evaluation-table';
-// import { ScrollToTopButton } from '@/components/scroll-to-top-button';
+
+import {
+  debtOptions,
+  evaluationData,
+  evaluationItems,
+  growthOptions,
+  perOptions,
+  revenueOptions,
+  sectorOptions,
+} from '@/data/evaluation-criteria';
 import { stockResults } from '@/data/mock-data';
-import dynamic from 'next/dynamic';
+
+import { EvaluationTable } from './components/evaluation-table';
+import { CompanyEvaluationTable } from './components/company-evaluation-table';
 
 const ScrollToTopButton = dynamic(
   () => import('@/components/scroll-to-top-button').then((mod) => mod.ScrollToTopButton),

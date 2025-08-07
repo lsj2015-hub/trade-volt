@@ -29,12 +29,10 @@ interface CompanyEvaluationTableProps {
   stocks: Stock[];
 }
 
-
-
-export function CompanyEvaluationTable({
+export const CompanyEvaluationTable = ({
   items,
   stocks,
-}: CompanyEvaluationTableProps) {
+}: CompanyEvaluationTableProps) => {
   // 각 회사의 총점을 계산합니다.
   const totalScores = stocks.map((_, companyIndex) =>
     mockScores.reduce((sum, scoreRow) => sum + (scoreRow[companyIndex] || 0), 0)

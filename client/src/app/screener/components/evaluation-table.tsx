@@ -25,7 +25,7 @@ interface EvaluationTableProps {
   data: EvaluationCategory[];
 }
 
-export function EvaluationTable({ data }: EvaluationTableProps) {
+export const EvaluationTable = ({ data }: EvaluationTableProps) => {
   return (
     <Table>
       <TableHeader>

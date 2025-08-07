@@ -5,7 +5,7 @@ import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export function ScrollToTopButton() {
+export const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   // 맨 위로 스크롤하는 함수 수정
@@ -59,4 +59,4 @@ export function ScrollToTopButton() {
       <span className="sr-only">Go to top</span>
     </Button>
   );
-}
+};
