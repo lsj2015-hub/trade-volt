@@ -1,10 +1,7 @@
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-// 필요한 아이콘들을 lucide-react에서 가져옵니다.
 import {
   Bell,
   Search,
@@ -15,8 +12,9 @@ import {
   FlaskConical,
   Zap,
   Building2,
-  ChartBarStacked, // Trade Volt 로고용 아이콘
+  ChartBarStacked,
 } from 'lucide-react';
+
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 

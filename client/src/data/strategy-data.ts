@@ -10,16 +10,22 @@ export const adjustmentDetailsData: {
   'news-scalping': {
     buy: [
       {
-        id: 'news-keyword',
-        label: '뉴스 키워드',
+        id: 'time-limit-minutes',
+        label: '○초 전 뉴스까지 검색',
         type: 'text',
-        defaultValue: '실적, 계약',
+        defaultValue: '10',
       },
       {
-        id: 'min-volume',
-        label: '최소 거래량',
+        id: 'search-limit',
+        label: '필터링 회사수',
         type: 'number',
-        defaultValue: '100000',
+        defaultValue: '5',
+      },
+      {
+        id: 'investment-amount',
+        label: '총매수금액',
+        type: 'number',
+        defaultValue: '10000000',
       },
     ],
     sell: [

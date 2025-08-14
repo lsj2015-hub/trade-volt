@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LayoutDashboard } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 import { FinancialStatementData, StockHistoryData } from '@/types/stock';
 import { StockNews } from '@/types/common';
@@ -25,7 +25,6 @@ export default function StockAnalysisPage() {
   >(null);
   const [newsData, setNewsData] = useState<StockNews[] | null>(null);
 
-  // ✅ 이 부분을 새로운 코드로 교체합니다.
   useEffect(() => {
     // 브라우저의 자동 스크롤 복원 기능을 끄는 것을 유지합니다.
     if (window.history.scrollRestoration) {
@@ -56,7 +55,7 @@ export default function StockAnalysisPage() {
     <div className="p-6 md:p-10 space-y-5">
       <header>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-          <LayoutDashboard /> Stock Analysis
+          <Building2 /> Stock Analysis
         </h1>
         <p className="text-muted-foreground mt-1">
           종목의 상세 정보를 분석합니다.

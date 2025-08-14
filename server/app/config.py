@@ -4,8 +4,23 @@ class Settings(BaseSettings):
     # .env 파일에서 환경 변수를 로드하도록 설정
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
-    # OpenAI API 키
+    # --- ✅ OpenAI API ---
     OPENAI_API_KEY: str
+    
+    # --- ✅ KIWOOM API --- 
+    KIWOOM_APP_KEY: str
+    KIWOOM_SECRET_KEY: str
+    KIWOOM_BASE_URL: str
+
+    # --- ✅ NAVER API --- 
+    NAVER_CLIENT_ID: str
+    NAVER_CLIENT_SECRET: str
+
+    # --- ✅ DART API ---
+    DART_API_KEY: str
+
+    # stock_list.json 경로 지정
+    STOCK_LIST_JSON: str | None = None
 
     # 환율 API 기본 URL
     EXCHANGE_RATE_API_URL: str = "https://api.frankfurter.app/latest"

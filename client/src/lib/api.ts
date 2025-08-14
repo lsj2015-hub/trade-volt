@@ -27,6 +27,7 @@ import {
   FluctuationAnalysisRequest,
   FluctuationAnalysisResponse,
 } from '../types/common';
+import { NewsSearchResponse } from '@/types/strategy';
 
 // 모든 API 요청에 대한 기본 URL
 const API_BASE_URL =
@@ -276,5 +277,19 @@ export const analyzeFluctuations = (
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestData),
+  });
+};
+
+export const searchNewsCandidates = (
+  timeLimitSeconds: number,
+  displayCount: number
+): Promise<NewsSearchResponse> => {
+  return fetchAPI(`${API_BASE_URL}/api/strategy/news-feed-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      time_limit_seconds: timeLimitSeconds,
+      display_count: displayCount,
+    }),
   });
 };

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { BrainCircuit, History, Settings } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -14,23 +15,25 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Button } from '@/components/ui/button';
-import { BrainCircuit, Settings, History, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
-import {
-  adjustmentDetailsData,
-  tradingStrategies,
-} from '@/data/strategy-data';
+import { tradingStrategies } from '@/data/strategy-data';
 import { tradingResults } from '@/data/mock-data';
+
+import { BigBuySmallSell } from './components/big-buy-small-sell';
+import { BollingerDay } from './components/bollinger-day';
+import { Multifunction } from './components/multi-function';
+import { NewsFeedScalping } from './components/newsfeed-scalping';
+
+const strategyComponentMap: Record<string, React.ReactNode> = {
+  'news-scalping': <NewsFeedScalping />,
+  'bollinger-day': <BollingerDay />,
+  'multi-function': <Multifunction />,
+  'big-buy-small-sell': <BigBuySmallSell />,
+};
 
 export default function StrategyPage() {
   const [selectedStrategy, setSelectedStrategy] = useState('news-scalping');
 
-  const currentDetails = adjustmentDetailsData[selectedStrategy] || {
-    buy: [],
-    sell: [],
-  };
-  
-  // --- 수익률 계산 로직 추가 ---
+  // --- 수익률 계산 로직 ---
   const totalProfit = tradingResults.reduce(
     (sum, item) => sum + item.profit,
     0
@@ -88,63 +91,8 @@ export default function StrategyPage() {
             Adjustment details
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {/* 좌우 배치를 위한 그리드 컨테이너 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* 좌측: 매수 조건 (구분선과 여백 추가) */}
-            <div className="space-y-4 md:border-r md:pr-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ArrowDownCircle className="h-5 w-5 text-blue-500" />
-                매수 조건
-              </h3>
-              {currentDetails.buy.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <Label htmlFor={item.id} className="shrink-0">
-                    {item.label}
-                  </Label>
-                  {/* 입력창 크기 조절 */}
-                  <Input
-                    id={item.id}
-                    type={item.type}
-                    defaultValue={item.defaultValue}
-                    className="w-full max-w-48"
-                  />
-                </div>
-              ))}
-            </div>
-            {/* 우측: 매도 조건 (여백 추가) */}
-            <div className="space-y-4 md:pl-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <ArrowUpCircle className="h-5 w-5 text-red-500" />
-                매도 조건
-              </h3>
-              {currentDetails.sell.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-4"
-                >
-                  <Label htmlFor={item.id} className="shrink-0">
-                    {item.label}
-                  </Label>
-                  {/* 입력창 크기 조절 */}
-                  <Input
-                    id={item.id}
-                    type={item.type}
-                    defaultValue={item.defaultValue}
-                    className="w-full max-w-48"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* 매매 실행 버튼 */}
-          <div className="mt-8 pt-6 border-t flex justify-end">
-            <Button className="font-semibold">매매 실행</Button>
-          </div>
-        </CardContent>
+        {/* 선택된 전략에 맞는 컴포넌트를 맵에서 찾아 렌더링합니다. */}
+        {strategyComponentMap[selectedStrategy]}
       </Card>
 
       {/* --- 3. Day Trading Results 섹션 --- */}
