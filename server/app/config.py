@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     KIWOOM_SECRET_KEY: str
     KIWOOM_BASE_URL: str
 
+    # --- ✅ KIWOOM API --- 
+    KIS_APP_KEY: str
+    KIS_APP_SECRET: str
+    KIS_BASE_URL: str
+
     # --- ✅ NAVER API --- 
     NAVER_CLIENT_ID: str
     NAVER_CLIENT_SECRET: str

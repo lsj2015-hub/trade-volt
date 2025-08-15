@@ -9,6 +9,7 @@ import {
   StockHistoryApiResponse,
   StockHistoryData,
   StockOverviewData,
+  StockItem,
 } from '@/types/stock';
 import {
   StockNews,
@@ -292,4 +293,23 @@ export const searchNewsCandidates = (
       display_count: displayCount,
     }),
   });
+};
+
+/**
+ * 주식 종목을 검색하는 함수 (새로 추가될 수 있는 함수 예시)
+ * @param query 검색어
+ * @param market 검색할 시장 (KOR, USA 등)
+ */
+export const searchStocks = async (
+  query: string,
+  market: string = 'KOR'
+): Promise<StockItem[]> => {
+  if (query.trim().length < 2) {
+    return Promise.resolve([]);
+  }
+  return fetchAPI(
+    `${API_BASE_URL}/api/search-stocks?query=${encodeURIComponent(
+      query
+    )}&market=${market}`
+  );
 };

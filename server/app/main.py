@@ -21,7 +21,8 @@ from app.schemas import (
     PerformanceAnalysisRequest, PerformanceAnalysisResponse,
     StockComparisonRequest, StockComparisonResponse,
     TradingVolumeRequest, TradingVolumeResponse, NetPurchaseRequest, NetPurchaseResponse,
-    FluctuationAnalysisRequest, FluctuationAnalysisResponse, NewsSearchResponse, NewsSearchRequest
+    FluctuationAnalysisRequest, FluctuationAnalysisResponse, NewsSearchResponse, NewsSearchRequest,
+    StockItem
 )
 from .services.yahoo_finance import YahooFinanceService
 from .services.krx_service import PyKRXService
@@ -31,6 +32,7 @@ from .services.llm import LLMService
 from .services.performance_service import PerformanceService
 from .services.fluctuation_service import FluctuationService
 from .services.news_scalping_service import NewsScalpingService
+from .services.korea_investment_service import KoreaInvestmentService
 
 from .core import formatting
 
@@ -70,6 +72,7 @@ translation_service = TranslationService()
 llm_service = LLMService(settings)
 fluctuation_service = FluctuationService()
 news_scalping_service= NewsScalpingService()
+kis_service = KoreaInvestmentService()
 
 # --- 미들웨어 설정---
 app.add_middleware(
@@ -176,6 +179,20 @@ def health_check():
     """서버가 정상적으로 실행 중인지 확인하는 기본 경로입니다."""
     return {"status": "ok", "message": "Trade Volt API is running."}
 
+@app.get("/api/search-stocks", response_model=List[StockItem])
+async def search_stocks(query: str, market: str = "KOR"):
+  """
+  주식 종목을 검색합니다.
+  - **query**: 검색어 (종목명 또는 코드)
+  - **market**: 'KOR' (국내) 또는 'USA' (미국)
+  """
+  if not query.strip():
+      return []
+
+  if market.upper() == "USA":
+      return kis_service.search_overseas_stocks(query)
+  else:
+      return kis_service.search_korean_stocks(query)
 
 # --- ✅ 통합 정보 조회 엔드포인트 ---
 @app.get("/api/stock/{symbol}/overview", response_model=StockOverviewResponse, tags=["Stock Info"])

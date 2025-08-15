@@ -8,6 +8,37 @@ class TranslationRequest(BaseModel):
 class TranslationResponse(BaseModel):
   translated_text: str = Field(..., description="번역된 텍스트")
 
+class StockItem(BaseModel):
+  """
+  프론트엔드로 반환될 최종적인 주식 종목 정보 스키마입니다.
+  국내/해외 주식 공통으로 사용됩니다.
+  """
+  code: str = Field(..., description="종목 코드 (한국) 또는 Ticker (미국)")
+  name: str = Field(..., description="종목명")
+
+class OverseasStockSearchOutput(BaseModel):
+  """
+  KIS API의 해외주식조건검색 결과 항목 스키마 ('output' 리스트의 요소)
+  """
+  name: str = Field(..., alias="name", description="종목명 (한글)")
+  ticker: str = Field(..., alias="symb", description="종목 Ticker")
+
+class OverseasStockSearchResponse(BaseModel):
+  """
+  KIS API의 해외주식조건검색 전체 응답 스키마
+  """
+  rt_cd: str
+  msg_cd: str
+  msg1: str
+  output: List[OverseasStockSearchOutput] = []
+
+class TokenData(BaseModel):
+  """
+  파일에 저장될 토큰 데이터 스키마
+  """
+  access_token: str
+  expires_at: str
+
 class StockInfo(BaseModel):
   symbol: str
   long_name: str = Field(..., alias="longName")

@@ -1,4 +1,9 @@
 // 통합 데이터 타입
+export interface StockItem {
+  code: string; // 종목 코드 (한국) 또는 Ticker (미국)
+  name: string; // 종목명
+}
+
 export interface StockOverviewData {
   profile: StockProfile;
   summary: FinancialSummary;
