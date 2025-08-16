@@ -1,26 +1,38 @@
 'use client';
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, getGainColor } from '@/lib/utils';
 
 interface PortfolioSummaryCardProps {
   title: string;
   totalMarketValue: number;
-  totalDayGain: number;
+  totalDaysGain: number;
   totalGain: number;
   currency: 'USD' | 'KRW';
 }
 
+const getGainColor = (value: number) =>
+  value >= 0 ? 'text-green-600' : 'text-red-600';
+
+const formatCurrency = (value: number, currency: 'USD' | 'KRW') => {
+  return new Intl.NumberFormat(currency === 'KRW' ? 'ko-KR' : 'en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: currency === 'KRW' ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 export function PortfolioSummaryCard({
   title,
   totalMarketValue,
-  totalDayGain,
+  totalDaysGain,
   totalGain,
   currency,
 }: PortfolioSummaryCardProps) {
-  const dayGainPercent =
-    totalMarketValue - totalDayGain !== 0
-      ? (totalDayGain / (totalMarketValue - totalDayGain)) * 100
+  const daysGainPercent =
+    totalMarketValue - totalDaysGain !== 0
+      ? (totalDaysGain / (totalMarketValue - totalDaysGain)) * 100
       : 0;
   const totalGainPercent =
     totalMarketValue - totalGain !== 0
@@ -28,7 +40,7 @@ export function PortfolioSummaryCard({
       : 0;
 
   return (
-    <Card className="bg-background">
+    <Card className='bg-background'>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
@@ -36,10 +48,10 @@ export function PortfolioSummaryCard({
         <p className="text-xl font-bold tracking-tighter">
           {formatCurrency(totalMarketValue, currency)}
         </p>
-        <div className={`text-sm font-semibold ${getGainColor(totalDayGain)}`}>
-          {totalDayGain >= 0 ? '+' : ''}
-          {formatCurrency(totalDayGain, currency)}
-          <span className="ml-2">({dayGainPercent.toFixed(2)}%)</span>
+        <div className={`text-sm font-semibold ${getGainColor(totalDaysGain)}`}>
+          {totalDaysGain >= 0 ? '+' : ''}
+          {formatCurrency(totalDaysGain, currency)}
+          <span className="ml-2">({daysGainPercent.toFixed(2)}%)</span>
           <span className="text-xs text-muted-foreground ml-2">
             Day&apos;s Gain
           </span>
