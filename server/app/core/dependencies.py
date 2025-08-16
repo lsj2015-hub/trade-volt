@@ -1,3 +1,7 @@
+# ===========================================
+# server/app/core/dependencies.py
+# ===========================================
+
 from fastapi import HTTPException, Depends
 from cachetools import TTLCache
 import httpx
@@ -81,7 +85,9 @@ def get_fluctuation_service() -> FluctuationService:
 def get_news_scalping_service() -> NewsScalpingService:
     return get_services().news_scalping_service
 
+# ✅ 수정된 부분: truncated 함수 완성
 def get_korea_investment_service() -> KoreaInvestmentService:
+    """한국투자증권 서비스 인스턴스를 반환합니다."""
     return get_services().korea_investment
 
 async def get_exchange_rate() -> float:

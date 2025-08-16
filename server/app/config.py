@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     # --- ✅ DART API ---
     DART_API_KEY: str
 
+    # ✅ 캐시 관련 설정 추가
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
+    
+    # 성능 분석 관련 설정
+    PERFORMANCE_CACHE_TTL: int = 3600  # 1시간
+    PERFORMANCE_MAX_TICKERS: int = 1000
+    PERFORMANCE_CHUNK_SIZE: int = 50
+    PERFORMANCE_TIMEOUT: int = 5
+
     # stock_list.json 경로 지정
     STOCK_LIST_JSON: str | None = None
 
@@ -34,7 +46,7 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = 3600
     
     # 환율 조회 실패 시 사용할 기본값
-    DEFAULT_KRW_RATE: float = 1350.0
+    DEFAULT_KRW_RATE: float = 1400.0
 
 # 설정 객체 생성 (애플리케이션 전체에서 이 객체를 통해 설정을 참조)
 settings = Settings()

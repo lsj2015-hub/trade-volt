@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from typing import List, Optional, Dict, Any
-from datetime import date
+from datetime import date, datetime
 
 class TranslationRequest(BaseModel):
   text: str
@@ -184,20 +184,54 @@ class SectorAnalysisResponse(BaseModel):
   data: List[SectorAnalysisDataPoint]
 
 # --- ✅ 수익율 종목 분석에 필요한 스키마 ---
-class PerformanceAnalysisRequest(BaseModel):
-  market: str = Field(..., description="시장 (예: 'NASDAQ', 'KOSPI')")
-  start_date: str = Field(..., description="분석 시작일 (YYYY-MM-DD)")
-  end_date: str = Field(..., description="분석 종료일 (YYYY-MM-DD)")
-  top_n: int = Field(10, ge=1, le=20, description="상위/하위 N개 종목 수")
-
 class StockPerformance(BaseModel):
   ticker: str
   name: str
   performance: float
 
+class PerformanceAnalysisRequest(BaseModel):
+  market: str = Field(..., description="분석할 시장")
+  start_date: str = Field(..., description="시작일 (YYYY-MM-DD)")
+  end_date: str = Field(..., description="종료일 (YYYY-MM-DD)")
+  top_n: int = Field(20, description="상위/하위 개수", ge=1, le=50)
+  
+  @field_validator('market')
+  def validate_market(cls, v):
+    allowed_markets = ['KOSPI', 'KOSDAQ', 'NASDAQ', 'NYSE', 'S&P500']
+    if v.upper() not in allowed_markets:
+      raise ValueError(f'시장은 {allowed_markets} 중 하나여야 합니다.')
+    return v.upper()
+  
+  @field_validator('start_date', 'end_date')
+  def validate_date_format(cls, v):
+    try:
+      datetime.strptime(v, '%Y-%m-%d')
+      return v
+    except ValueError:
+      raise ValueError('날짜는 YYYY-MM-DD 형식이어야 합니다.')
+  
+  @field_validator('end_date')
+  def validate_date_range(cls, v, values):
+    if 'start_date' in values:
+      start = datetime.strptime(values['start_date'], '%Y-%m-%d')
+      end = datetime.strptime(v, '%Y-%m-%d')
+      
+      if end <= start:
+        raise ValueError('종료일은 시작일보다 늦어야 합니다.')
+      
+      if (end - start).days > 365:
+        raise ValueError('분석 기간은 최대 1년까지 지원됩니다.')
+    
+    return v
+  
 class PerformanceAnalysisResponse(BaseModel):
-  top_performers: List[StockPerformance]
-  bottom_performers: List[StockPerformance]
+  top_performers: List[Dict[str, Any]]
+  bottom_performers: List[Dict[str, Any]]
+  total_analyzed: Optional[int] = None
+  analysis_period: Optional[str] = None
+  market: Optional[str] = None
+  cache_hit: Optional[bool] = None
+  processing_time: Optional[float] = None
 
 class StockData(BaseModel):
   date: date
@@ -206,6 +240,31 @@ class StockData(BaseModel):
   low: float
   close: float
   volume: int
+
+# ✅ 캐시 관련 스키마 추가
+class CacheStatsResponse(BaseModel):
+  redis_enabled: bool
+  redis_host: str
+  memory_cache_size: int
+  redis_keys: int
+  cache_ttl: int
+  config: Dict[str, Any]
+
+class CacheClearRequest(BaseModel):
+  market: Optional[str] = Field(None, description="특정 시장만 클리어 (전체: null)")
+  confirm: bool = Field(False, description="캐시 삭제 확인")
+
+class CacheClearResponse(BaseModel):
+  success: bool
+  message: str
+  cleared_items: Optional[int] = None
+
+# ✅ 빠른 분석 요청 스키마
+class FastAnalysisRequest(BaseModel):
+  market: str = Field(..., description="분석할 시장")
+  start_date: str = Field(..., description="시작일 (YYYY-MM-DD)")
+  end_date: str = Field(..., description="종료일 (YYYY-MM-DD)")
+  top_n: int = Field(10, description="상위/하위 개수", ge=1, le=20)  # 더 제한적
 
 # --- ✅ 주가 비교 분석 기능에 필요한 스키마 ---
 class StockComparisonRequest(BaseModel):
