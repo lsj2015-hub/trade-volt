@@ -21,18 +21,21 @@ import { searchStocks, APIError } from '@/lib/api';
 interface SearchModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onStockSelect: (stock: StockItem, market: 'KOR' | 'OVERSEAS') => void;
 }
 
-export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
+export function SearchModal({
+  isOpen,
+  onOpenChange,
+  onStockSelect,
+}: SearchModalProps) {
   const [query, setQuery] = useState('');
-  const [market, setMarket] = useState('KOR');
+  const [market, setMarket] = useState<'KOR' | 'OVERSEAS'>('KOR');
   const [results, setResults] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- 🌟 1. useCallback을 useMemo로 변경 ---
-  // debounce 함수는 매 렌더링마다 새로 생성될 필요가 없으므로,
-  // useMemo를 사용하여 컴포넌트가 처음 마운트될 때 딱 한 번만 생성하도록 합니다.
+  // debounce 함수는 매 렌더링마다 새로 생성될 필요가 없으므로, useMemo를 사용하여 컴포넌트가 처음 마운트될 때 딱 한 번만 생성
   const debouncedFetch = useMemo(
     () =>
       debounce(async (currentQuery: string, currentMarket: string) => {
@@ -46,7 +49,7 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
         try {
           const data = await searchStocks(currentQuery, currentMarket);
 
-          console.log('API 응답 데이터:', data); 
+          console.log('API 응답 데이터:', data);
 
           setResults(data);
         } catch (err) {
@@ -84,6 +87,11 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
     }
   }, [isOpen]);
 
+  const handleMarketChange = (newMarket: 'KOR' | 'OVERSEAS') => {
+    setMarket(newMarket);
+    setQuery('');
+  };
+
   // UI 렌더링 로직
   const renderContent = () => {
     if (loading) {
@@ -103,14 +111,17 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
     }
     if (results.length > 0) {
       console.log('렌더링 직전 results 상태:', results);
-      
+
       return results.map((item) => (
         <div
           key={item.code}
           className="flex justify-between p-2 hover:bg-muted rounded-md cursor-pointer"
+          onClick={() => onStockSelect(item, market)}
         >
-          <span className="font-medium">{item.name}</span>
-          <span className="text-muted-foreground">{item.code}</span>
+          <span className="text-cyan-800 text-xs">{item.name}</span>
+          <span className="font-semibold text-muted-foreground">
+            {item.code}
+          </span>
         </div>
       ));
     }
@@ -138,7 +149,7 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
           />
           <RadioGroup
             value={market}
-            onValueChange={setMarket}
+            onValueChange={handleMarketChange}
             className="flex items-center space-x-4"
           >
             <div className="flex items-center space-x-2">
@@ -146,8 +157,8 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
               <Label htmlFor="r-kor">국내주식</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="USA" id="r-usa" />
-              <Label htmlFor="r-usa">미국주식</Label>
+              <RadioGroupItem value="OVERSEAS" id="r-overseas" />
+              <Label htmlFor="r-overseas">해외주식</Label>
             </div>
           </RadioGroup>
           <div className="mt-4 h-64 overflow-y-auto border rounded-md p-2">

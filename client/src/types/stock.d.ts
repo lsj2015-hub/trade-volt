@@ -105,3 +105,43 @@ export interface StockHistoryApiResponse {
   endDate: string;
   data: StockHistoryData[];
 }
+
+/**
+ * 보유 주식 정보 타입 (백엔드 HoldingItem 스키마와 일치)
+ */
+export interface HoldingItem {
+  stock_code: string;
+  stock_name: string;
+  market: 'KOR' | 'OVERSEAS';
+  quantity: number;
+  average_price: number;
+  current_price: number;
+  valuation: number;
+  profit_loss: number;
+  return_rate: number;
+  days_gain: number;
+}
+
+/**
+ * 포트폴리오 전체 응답 타입 (백엔드 PortfolioResponse 스키마와 일치)
+ */
+export interface Portfolio {
+  portfolio: HoldingItem[];
+  total_assets: number;
+  total_profit_loss: number;
+  total_return_rate: number;
+  total_days_gain: number;
+}
+
+/**
+ * 거래 생성 시 보낼 데이터 타입 (백엔드 TransactionCreate 스키마와 일치)
+ */
+export interface TransactionData {
+  stock_code: string;
+  stock_name: string;
+  market: 'KOR' | 'OVERSEAS';
+  transaction_type: 'BUY' | 'SELL';
+  quantity: number;
+  price: number;
+  transaction_date: date;
+}

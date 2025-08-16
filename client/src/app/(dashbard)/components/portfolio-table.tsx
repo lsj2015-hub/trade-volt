@@ -1,73 +1,75 @@
-import { PortfolioItem } from "@/data/portfolio-data";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getGainColor } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { HoldingItem } from '@/types/stock';
+import { cn, getGainColor } from '@/lib/utils';
 
-export const PortfolioTable = ({
-  stocks,
-  currency,
-}: {
-  stocks: PortfolioItem[];
-  currency: 'USD' | 'KRW';
-}) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat(currency === 'KRW' ? 'ko-KR' : 'en-US', {
+interface PortfolioTableProps {
+  stocks: HoldingItem[];
+  currency: string;
+}
+
+export const PortfolioTable = ({ stocks }: PortfolioTableProps) => {
+  const formatCurrency = (value: number, market: 'KOR' | 'OVERSEAS') => {
+    const currency = market === 'KOR' ? 'KRW' : 'USD';
+    return value.toLocaleString(undefined, {
       style: 'currency',
       currency,
-    }).format(value);
+      maximumFractionDigits: 2,
+    });
   };
-
-  const formatPercent = (value: number) =>
-    `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[150px]">Ticker</TableHead>
-          <TableHead>Shares</TableHead>
-          <TableHead className="text-right">Avg Cost / Share</TableHead>
-          <TableHead className="text-right">Price</TableHead>
-          <TableHead className="text-right">Day&apos;s Gain</TableHead>
-          <TableHead className="text-right">Total Gain</TableHead>
-          <TableHead className="text-right">Market Value</TableHead>
+          <TableHead>종목명</TableHead>
+          <TableHead className="text-right">보유수량</TableHead>
+          <TableHead className="text-right">BEP단가</TableHead>
+          <TableHead className="text-right">현재가</TableHead>
+          <TableHead className="text-right">평가금액</TableHead>
+          <TableHead className="text-right">평가손익</TableHead>
+          <TableHead className="text-right">수익률</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {stocks.map((stock) => {
-          const totalGainPercent =
-            (stock.totalGain / (stock.avgCost * stock.shares)) * 100;
-          return (
-            <TableRow key={stock.ticker}>
-              <TableCell className="font-medium">
-                <div>{stock.ticker}</div>
-                <div className="text-xs text-muted-foreground">
-                  {stock.name}
-                </div>
-              </TableCell>
-              <TableCell>{stock.shares}</TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(stock.avgCost)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(stock.price)}
-              </TableCell>
-              <TableCell
-                className={`text-right ${getGainColor(stock.daysGain)}`}
-              >
-                {formatCurrency(stock.daysGain)}
-              </TableCell>
-              <TableCell
-                className={`text-right ${getGainColor(stock.totalGain)}`}
-              >
-                <div>{formatCurrency(stock.totalGain)}</div>
-                <div className="text-xs">{formatPercent(totalGainPercent)}</div>
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                {formatCurrency(stock.marketValue)}
-              </TableCell>
-            </TableRow>
-          );
-        })}
+        {stocks.map((stock) => (
+          <TableRow key={stock.stock_code}>
+            <TableCell>
+              <div className="font-medium">{stock.stock_name}</div>
+              <div className="text-sm text-muted-foreground">
+                {stock.stock_code}
+              </div>
+            </TableCell>
+            <TableCell className="text-right">
+              {stock.quantity.toLocaleString()}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatCurrency(stock.average_price, stock.market)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatCurrency(stock.current_price, stock.market)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatCurrency(stock.valuation, stock.market)}
+            </TableCell>
+            <TableCell
+              className={cn('text-right', `${getGainColor(stock.profit_loss)}`)}
+            >
+              {formatCurrency(stock.profit_loss, stock.market)}
+            </TableCell>
+            <TableCell
+              className={cn('text-right', `${getGainColor(stock.return_rate)}`)}
+            >
+              {stock.return_rate.toFixed(2)}%
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );

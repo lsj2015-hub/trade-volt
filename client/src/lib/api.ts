@@ -10,6 +10,9 @@ import {
   StockHistoryData,
   StockOverviewData,
   StockItem,
+  Portfolio,
+  TransactionData,
+  HoldingItem,
 } from '@/types/stock';
 import {
   StockNews,
@@ -54,20 +57,28 @@ const fetchAPI = async <T>(
   options: RequestInit = {}
 ): Promise<T> => {
   try {
-    const response = await fetch(url, options);
+    // 🌟 fetch 옵션에 기본 헤더를 추가하여 모든 요청에 적용될 수 있도록 개선
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    const response = await fetch(url, { ...options, headers: defaultHeaders });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      const errorMessage =
-        errorData?.detail ||
-        `서버에서 오류가 발생했습니다. (상태 코드: ${response.status})`;
-      throw new APIError(errorMessage, response.status);
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: '서버 응답 오류' }));
+      throw new APIError(
+        errorData.detail || '서버에서 오류가 발생했습니다.',
+        response.status
+      );
     }
-    return response.json();
+    // 응답 본문이 없는 경우(e.g., 204 No Content)를 대비
+    const text = await response.text();
+    return text ? (JSON.parse(text) as T) : ({} as T);
   } catch (error) {
-    if (error instanceof APIError) {
-      throw error;
-    }
+    if (error instanceof APIError) throw error;
     console.error(`API 호출 실패: ${url}`, error);
     throw new Error('서버와 통신할 수 없습니다. 네트워크 연결을 확인해주세요.');
   }
@@ -298,18 +309,69 @@ export const searchNewsCandidates = (
 /**
  * 주식 종목을 검색하는 함수 (새로 추가될 수 있는 함수 예시)
  * @param query 검색어
- * @param market 검색할 시장 (KOR, USA 등)
+ * @param market 검색할 시장 (KOR, OVERSEAS 등)
  */
-export const searchStocks = async (
-  query: string,
-  market: string = 'KOR'
-): Promise<StockItem[]> => {
+export const searchStocks = (query: string, market: string): Promise<StockItem[]> => {
   if (query.trim().length < 2) {
     return Promise.resolve([]);
   }
-  return fetchAPI(
-    `${API_BASE_URL}/api/search-stocks?query=${encodeURIComponent(
-      query
-    )}&market=${market}`
-  );
+  const url = `${API_BASE_URL}/api/search-stocks?query=${encodeURIComponent(
+    query
+  )}&market=${market}`;
+  return fetchAPI<StockItem[]>(url);
+};
+
+/**
+ * 특정 종목의 현재가를 조회하는 API
+ * @param market "KOR" | "OVERSEAS"
+ * @param stockCode 종목코드 또는 Ticker
+ */
+export const getStockPrice = async (
+  market: string,
+  stockCode: string
+): Promise<{ price: string }> => {
+  const url = `${API_BASE_URL}/api/stocks/price/${market}/${stockCode}`;
+  return fetchAPI<{ price: string }>(url);
+};
+
+/**
+ * 특정 종목의 보유 현황을 조회하는 API
+ * @param stockCode 종목 코드 또는 Ticker
+ */
+export const getHolding = async (
+  stockCode: string
+): Promise<HoldingItem | null> => {
+  const url = `${API_BASE_URL}/api/portfolio/${stockCode}`;
+  try {
+    const response = await fetchAPI<HoldingItem>(url);
+    // FastAPI에서 null을 반환하면 빈 객체가 될 수 있으므로, 키 존재 여부로 실제 데이터 확인
+    return response && response.stock_code ? response : null;
+  } catch (error) {
+    if (error instanceof APIError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+/**
+ * 전체 포트폴리오 정보를 조회하는 API
+ */
+export const getPortfolio = async (): Promise<Portfolio> => {
+  const url = `${API_BASE_URL}/api/portfolio`;
+  return fetchAPI<Portfolio>(url);
+};
+
+/**
+ * 새로운 거래(매수/매도)를 기록하는 API
+ * @param tradeData 거래 정보
+ */
+export const postTrade = async (
+  tradeData: TransactionData
+): Promise<TransactionData> => {
+  const url = `${API_BASE_URL}/api/portfolio/trade`;
+  return fetchAPI<TransactionData>(url, {
+    method: 'POST',
+    body: JSON.stringify(tradeData),
+  });
 };

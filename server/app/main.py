@@ -4,26 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from starlette.concurrency import run_in_threadpool
 from cachetools import TTLCache
+from sqlalchemy.orm import Session
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import openai
 import httpx
 import logging
 
 # --- 내부 모듈 임포트 ---
 from app.config import Settings
-from app.schemas import (
-    TranslationRequest, TranslationResponse, OfficersResponse,
-    FinancialStatementResponse, PriceHistoryResponse, NewsResponse,
-    AIChatRequest, AIChatResponse, StockProfile, FinancialSummary, 
-    InvestmentMetrics, MarketData, AnalystRecommendations, StockOverviewResponse, Officer,
-    SectorTickerResponse, SectorAnalysisRequest, SectorAnalysisResponse, 
-    PerformanceAnalysisRequest, PerformanceAnalysisResponse,
-    StockComparisonRequest, StockComparisonResponse,
-    TradingVolumeRequest, TradingVolumeResponse, NetPurchaseRequest, NetPurchaseResponse,
-    FluctuationAnalysisRequest, FluctuationAnalysisResponse, NewsSearchResponse, NewsSearchRequest,
-    StockItem
-)
+from app import schemas
 from .services.yahoo_finance import YahooFinanceService
 from .services.krx_service import PyKRXService
 from .services.news import NewsService
@@ -34,9 +24,13 @@ from .services.fluctuation_service import FluctuationService
 from .services.news_scalping_service import NewsScalpingService
 from .services.korea_investment_service import KoreaInvestmentService
 
+from app.models import models
+from app.crud import crud
+from app.database import SessionLocal, engine
+
 from .core import formatting
 
-# 로거 설정 (print 대신 사용하면 더 체계적인 로깅이 가능합니다)
+# 로거 설정
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -56,12 +50,24 @@ async def lifespan(app: FastAPI):
     logger.info("서버 시작 준비 완료.")
     yield
     logger.info("서버를 종료합니다.")
+
+# 서버 시작 시 DB 테이블 생성
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
   title="Trade Volt API",
   version="1.0.0",
   description="기업 정보 조회, 재무제표, AI 분석 기능을 제공하는 API입니다.",
   lifespan=lifespan
 )
+
+# DB 세션 의존성 주입
+def get_db():
+  db = SessionLocal()
+  try:
+    yield db
+  finally:
+    db.close()
 
 # --- 서비스 인스턴스 생성 ---
 yfs_service = YahooFinanceService()
@@ -179,23 +185,8 @@ def health_check():
     """서버가 정상적으로 실행 중인지 확인하는 기본 경로입니다."""
     return {"status": "ok", "message": "Trade Volt API is running."}
 
-@app.get("/api/search-stocks", response_model=List[StockItem])
-async def search_stocks(query: str, market: str = "KOR"):
-  """
-  주식 종목을 검색합니다.
-  - **query**: 검색어 (종목명 또는 코드)
-  - **market**: 'KOR' (국내) 또는 'USA' (미국)
-  """
-  if not query.strip():
-      return []
-
-  if market.upper() == "USA":
-      return kis_service.search_overseas_stocks(query)
-  else:
-      return kis_service.search_korean_stocks(query)
-
 # --- ✅ 통합 정보 조회 엔드포인트 ---
-@app.get("/api/stock/{symbol}/overview", response_model=StockOverviewResponse, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/overview", response_model=schemas.StockOverviewResponse, tags=["Stock Info"])
 async def get_stock_overview(
   symbol: str,
   info: dict = Depends(get_yfinance_info),
@@ -241,7 +232,7 @@ async def get_stock_overview(
   }
 
 # ✨ 회사 기본 정보 조회
-@app.get("/api/stock/{symbol}/profile", response_model=StockProfile, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/profile", response_model=schemas.StockProfile, tags=["Stock Info"])
 async def get_stock_profile(
   info: dict = Depends(get_yfinance_info),
   ts: TranslationService = Depends(get_translation_service)
@@ -251,7 +242,7 @@ async def get_stock_profile(
   return formatting.format_stock_profile(info, summary_kr)
 
 # ✨ 재무 요약 정보 조회
-@app.get("/api/stock/{symbol}/financial-summary", response_model=FinancialSummary, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/financial-summary", response_model=schemas.FinancialSummary, tags=["Stock Info"])
 async def get_financial_summary(
   symbol: str,
   info: dict = Depends(get_yfinance_info),
@@ -260,12 +251,12 @@ async def get_financial_summary(
   return formatting.format_financial_summary(info, symbol, rate)
 
 # ✨ 투자 지표 조회 
-@app.get("/api/stock/{symbol}/metrics", response_model=InvestmentMetrics, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/metrics", response_model=schemas.InvestmentMetrics, tags=["Stock Info"])
 async def get_investment_metrics(info: dict = Depends(get_yfinance_info)):
   return formatting.format_investment_metrics(info)
 
 # ✨ 주가/시장 정보 조회
-@app.get("/api/stock/{symbol}/market-data", response_model=MarketData, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/market-data", response_model=schemas.MarketData, tags=["Stock Info"])
 async def get_market_data(
   symbol: str,
   info: dict = Depends(get_yfinance_info),
@@ -274,11 +265,11 @@ async def get_market_data(
   return formatting.format_market_data(info, symbol, rate)
 
 # ✨ 분석가 의견 조회
-@app.get("/api/stock/{symbol}/recommendations", response_model=AnalystRecommendations, tags=["Stock Info"])
+@app.get("/api/stock/{symbol}/recommendations", response_model=schemas.AnalystRecommendations, tags=["Stock Info"])
 async def get_analyst_recommendations(info: dict = Depends(get_yfinance_info)):
   return formatting.format_analyst_recommendations(info)
 
-@app.get("/api/stock/{symbol}/officers", response_model=OfficersResponse, tags=["Stock Details"])
+@app.get("/api/stock/{symbol}/officers", response_model=schemas.OfficersResponse, tags=["Stock Details"])
 async def get_stock_officers(
   symbol: str,
   yfs: YahooFinanceService = Depends(get_yahoo_finance_service),
@@ -296,7 +287,7 @@ async def get_stock_officers(
   top_officers = sorted(officers_raw, key=lambda x: x.get('totalPay', 0), reverse=True)[:5]
   
   formatted_officers = [
-    Officer(
+    schemas.Officer(
       name=o.get("name", ""),
       title=o.get("title", ""),
       totalPay=formatting.format_currency(o.get("totalPay"), symbol, rate)
@@ -306,7 +297,7 @@ async def get_stock_officers(
   return {"officers": formatted_officers}
 
 # ✨ 재무제표 조회 (income, balance, cashflow)
-@app.get("/api/stock/{symbol}/financials/{statement_type}", response_model=FinancialStatementResponse, tags=["Stock Details"])
+@app.get("/api/stock/{symbol}/financials/{statement_type}", response_model=schemas.FinancialStatementResponse, tags=["Stock Details"])
 async def get_financial_statement(
   symbol: str, statement_type: str,
   yfs: YahooFinanceService = Depends(get_yahoo_finance_service)
@@ -327,7 +318,7 @@ async def get_financial_statement(
   return formatting.format_financial_statement_response(df_raw, statement_type, symbol)
 
 # ✨ 기간별 주가 히스토리 조회
-@app.get("/api/stock/{symbol}/history", response_model=PriceHistoryResponse, tags=["Stock Details"])
+@app.get("/api/stock/{symbol}/history", response_model=schemas.PriceHistoryResponse, tags=["Stock Details"])
 async def get_stock_history(
   symbol: str,
   start_date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
@@ -351,7 +342,7 @@ async def get_stock_history(
     "data": display_df.to_dict("records")
   }
 
-@app.get("/api/stock/{symbol}/news", response_model=NewsResponse, tags=["Stock Details"])
+@app.get("/api/stock/{symbol}/news", response_model=schemas.NewsResponse, tags=["Stock Details"])
 async def get_yahoo_rss_news(
   symbol: str, limit: int = Query(10, ge=1, le=50),
   ns: NewsService = Depends(get_news_service)
@@ -363,18 +354,18 @@ async def get_yahoo_rss_news(
   return {"news": news_list}
 
 # --- 유틸리티 및 AI 엔드포인트 ---
-@app.post("/api/util/translate", response_model=TranslationResponse, tags=["Utilities"])
+@app.post("/api/util/translate", response_model=schemas.TranslationResponse, tags=["Utilities"])
 async def translate_text(
-  req: TranslationRequest,
+  req: schemas.TranslationRequest,
   ts: TranslationService = Depends(get_translation_service)
 ):
   """텍스트 번역"""
   translated_text = await run_in_threadpool(ts.translate_to_korean, req.text)
   return {"translated_text": translated_text}
 
-@app.post("/api/ai/chat", response_model=AIChatResponse, tags=["AI"])
+@app.post("/api/ai/chat", response_model=schemas.AIChatResponse, tags=["AI"])
 async def chat_with_ai(
-  req: AIChatRequest,
+  req: schemas.AIChatRequest,
   llm: LLMService = Depends(get_llm_service)
 ):
   """LLM 기반 주식 분석 Q&A"""
@@ -401,7 +392,7 @@ def get_sector_groups(krx: PyKRXService = Depends(get_krx_service)):
   """KOSPI, KOSDAQ 섹터 그룹 데이터를 제공합니다."""
   return krx.get_sector_groups()
 
-@app.get("/api/sectors/tickers", response_model=SectorTickerResponse, tags=["Sector Analysis"])
+@app.get("/api/sectors/tickers", response_model=schemas.SectorTickerResponse, tags=["Sector Analysis"])
 async def get_tickers_by_group(
   market: str, 
   group: str,
@@ -416,9 +407,9 @@ async def get_tickers_by_group(
     logger.error(f"섹터 티커 조회 오류: market={market}, group={group}, error={e}", exc_info=True)
     raise HTTPException(status_code=404, detail="섹터 목록을 가져오는 데 실패했습니다.")
 
-@app.post("/api/sectors/analysis", response_model=SectorAnalysisResponse, tags=["Sector Analysis"])
+@app.post("/api/sectors/analysis", response_model=schemas.SectorAnalysisResponse, tags=["Sector Analysis"])
 async def analyze_sectors(
-    request: SectorAnalysisRequest,
+    request: schemas.SectorAnalysisRequest,
     krx: PyKRXService = Depends(get_krx_service)
 ):
   """요청된 기간과 티커 목록에 대해 누적 수익률을 분석하여 반환합니다."""
@@ -442,9 +433,9 @@ async def analyze_sectors(
     raise e
     
 # --- ✅ 수익율 상위/하위 종목 분석 API 엔드포인트 ---
-@app.post("/api/performance/analysis", response_model=PerformanceAnalysisResponse, tags=["Performance Analysis"])
+@app.post("/api/performance/analysis", response_model=schemas.PerformanceAnalysisResponse, tags=["Performance Analysis"])
 async def analyze_market_performance(
-  request: PerformanceAnalysisRequest,
+  request: schemas.PerformanceAnalysisRequest,
   ps: PerformanceService = Depends(get_performance_service)
 ):
   """
@@ -469,9 +460,9 @@ async def analyze_market_performance(
     raise e
     
 # --- ✅ 주가 비교 분석 API 엔드포인트 ---
-@app.post("/api/stock/compare", response_model=StockComparisonResponse, tags=["Stock Analysis"])
+@app.post("/api/stock/compare", response_model=schemas.StockComparisonResponse, tags=["Stock Analysis"])
 async def compare_stocks(
-  request: StockComparisonRequest,
+  request: schemas.StockComparisonRequest,
   yfs: YahooFinanceService = Depends(get_yahoo_finance_service)
 ):
   """
@@ -510,9 +501,9 @@ async def compare_stocks(
     raise e
     
 # --- ✅ 투자자별 매매동향 API 엔드포인트 ---
-@app.post("/api/krx/trading-volume", response_model=TradingVolumeResponse, tags=["Krx Analysis"])
+@app.post("/api/krx/trading-volume", response_model=schemas.TradingVolumeResponse, tags=["Krx Analysis"])
 async def get_trading_volume(
-  request: TradingVolumeRequest,
+  request: schemas.TradingVolumeRequest,
   krx: PyKRXService = Depends(get_krx_service)
 ):
   try:
@@ -536,9 +527,9 @@ async def get_trading_volume(
     logger.error(f"투자자별 매매현황 조회 API 오류: request={request.dict()}, error={e}", exc_info=True)
     raise HTTPException(status_code=500, detail="서버 내부에서 조회 중 오류가 발생했습니다.")
 
-@app.post("/api/krx/net-purchases", response_model=NetPurchaseResponse, tags=["Krx Analysis"])
+@app.post("/api/krx/net-purchases", response_model=schemas.NetPurchaseResponse, tags=["Krx Analysis"])
 async def get_top_net_purchases(
-  request: NetPurchaseRequest,
+  request: schemas.NetPurchaseRequest,
   krx: PyKRXService = Depends(get_krx_service)
 ):
   """
@@ -561,9 +552,9 @@ async def get_top_net_purchases(
     raise HTTPException(status_code=500, detail="서버 내부에서 조회 중 오류가 발생했습니다.")
     
 # ✅ 변동성 분석 엔드포인트
-@app.post("/api/stocks/fluctuation-analysis", response_model=FluctuationAnalysisResponse, tags=["Stock Analysis"])
+@app.post("/api/stocks/fluctuation-analysis", response_model=schemas.FluctuationAnalysisResponse, tags=["Stock Analysis"])
 async def analyze_fluctuation(
-  request: FluctuationAnalysisRequest,
+  request: schemas.FluctuationAnalysisRequest,
   fs: FluctuationService = Depends(get_fluctuation_service)
 ):
   try:
@@ -579,11 +570,62 @@ async def analyze_fluctuation(
     logger.error(f"변동성 분석 API 오류: request={request.model_dump()}, error={e}", exc_info=True)
     raise HTTPException(status_code=500, detail="서버 내부에서 변동성 분석 중 오류가 발생했습니다.")
   
-@app.post("/api/strategy/news-feed-search", response_model=NewsSearchResponse, tags=["Strategy API"])
-async def search_news_feed_candidates(req: NewsSearchRequest):
+@app.post("/api/strategy/news-feed-search", response_model=schemas.NewsSearchResponse, tags=["Strategy API"])
+async def search_news_feed_candidates(req: schemas.NewsSearchRequest):
     """뉴스 필터링 후 DART 공시를 검증하고, 각 단계별 결과를 모두 반환합니다."""
     result = await news_scalping_service.get_news_candidates(
         time_limit_seconds=req.time_limit_seconds,
         display_count=req.display_count
     )
     return result
+
+# KIS open api를 이용한 실시간 데이터 이용
+@app.get("/api/search-stocks", response_model=List[schemas.StockItem])
+async def search_stocks(query: str, market: str = "KOR"):
+  """
+  주식 종목을 검색합니다.
+  - **query**: 검색어 (종목명 또는 코드)
+  - **market**: 'KOR' (국내) 또는 'OVERSEAS' (해외)
+  """
+  if not query.strip():
+      return []
+
+  if market.upper() == "OVERSEAS":
+      return kis_service.search_overseas_stocks(query)
+  else:
+      return kis_service.search_korean_stocks(query)
+
+# --- 현재가 조회 API ---
+@app.get("/api/stocks/price/{market}/{stock_code}", response_model=dict)
+def get_stock_price(market: str, stock_code: str):
+    price = None
+    # KIS API를 사용하는 현재가 조회 로직을 사용합니다.
+    if market.upper() == "KOR":
+        price = kis_service.get_current_price(market, stock_code)
+    elif market.upper() == "OVERSEAS":
+        price = kis_service.get_current_price(market, stock_code)
+    
+    if price:
+        return {"price": price}
+    return {"price": "N/A"}
+
+# --- 거래 기록 API ---
+@app.post("/api/portfolio/trade", response_model=schemas.TransactionCreate)
+def record_trade(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
+    # DB에 거래를 기록하는 crud 함수를 사용합니다.
+    db_transaction = models.Transaction(**transaction.model_dump())
+    crud.create_transaction(db=db, transaction=db_transaction)
+    return transaction
+
+# --- 전체 포트폴리오 조회 API ---
+@app.get("/api/portfolio", response_model=schemas.PortfolioResponse)
+def get_full_portfolio(db: Session = Depends(get_db)):
+    # 일일 손익 계산 로직이 포함된 crud.get_portfolio 함수를 사용합니다.
+    portfolio_data = crud.get_portfolio(db)
+    return portfolio_data
+
+# --- 단일 종목 조회 API ---
+@app.get("/api/portfolio/{stock_code}", response_model=Optional[schemas.HoldingItem])
+def get_single_holding(stock_code: str, db: Session = Depends(get_db)):
+    # 단일 종목을 찾는 crud 함수를 사용합니다.
+    return crud.get_holding_by_stock_code(db=db, stock_code=stock_code)

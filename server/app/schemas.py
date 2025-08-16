@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import date
+from app.models.models import MarketType, TransactionType
 
 class TranslationRequest(BaseModel):
   text: str
@@ -13,24 +14,8 @@ class StockItem(BaseModel):
   프론트엔드로 반환될 최종적인 주식 종목 정보 스키마입니다.
   국내/해외 주식 공통으로 사용됩니다.
   """
-  code: str = Field(..., description="종목 코드 (한국) 또는 Ticker (미국)")
+  code: str = Field(..., description="종목 코드 또는 Ticker")
   name: str = Field(..., description="종목명")
-
-class OverseasStockSearchOutput(BaseModel):
-  """
-  KIS API의 해외주식조건검색 결과 항목 스키마 ('output' 리스트의 요소)
-  """
-  name: str = Field(..., alias="name", description="종목명 (한글)")
-  ticker: str = Field(..., alias="symb", description="종목 Ticker")
-
-class OverseasStockSearchResponse(BaseModel):
-  """
-  KIS API의 해외주식조건검색 전체 응답 스키마
-  """
-  rt_cd: str
-  msg_cd: str
-  msg1: str
-  output: List[OverseasStockSearchOutput] = []
 
 class TokenData(BaseModel):
   """
@@ -294,43 +279,81 @@ class FluctuationAnalysisResponse(BaseModel):
 
 # News Scalping Logic Type
 class NewsSearchRequest(BaseModel):
-    time_limit_seconds: int
-    display_count: int
+  time_limit_seconds: int
+  display_count: int
 
 class Disclosure(BaseModel):
-    report_name: str
-    url: str | None = None
+  report_name: str
+  url: str | None = None
 
 class RawNewsItem(BaseModel):
-    news_title: str
-    news_link: str
-    news_published: str
+  news_title: str
+  news_link: str
+  news_published: str
 
 class FilteredNewsItem(BaseModel):
-    stock_name: str
-    stock_code: str
-    news_title: str
-    news_link: str
-    news_published: str
+  stock_name: str
+  stock_code: str
+  news_title: str
+  news_link: str
+  news_published: str
 
 class VerifiedNewsItem(FilteredNewsItem):
-    disclosure_report_name: str
-    disclosure_url: str
+  disclosure_report_name: str
+  disclosure_url: str
 
 class NewsCandidate(BaseModel):
-    stock_name: str
-    stock_code: str
-    news_title: str
-    news_link: str
-    news_published: str
-    disclosure: Disclosure | None = None 
+  stock_name: str
+  stock_code: str
+  news_title: str
+  news_link: str
+  news_published: str
+  disclosure: Disclosure | None = None 
 
 class NewsSearchResponse(BaseModel):
-    message: str
-    # 1단계: 네이버 API 원본 뉴스
-    raw_naver_news: List[RawNewsItem] = Field(default_factory=list)
-    # 2단계: 키워드/시간 필터링 및 회사명 추출 완료
-    filtered_news: List[FilteredNewsItem] = Field(default_factory=list)
-    # 3단계: DART 공시 검증 완료
-    dart_verified_news: List[VerifiedNewsItem] = Field(default_factory=list)
+  message: str
+  # 1단계: 네이버 API 원본 뉴스
+  raw_naver_news: List[RawNewsItem] = Field(default_factory=list)
+  # 2단계: 키워드/시간 필터링 및 회사명 추출 완료
+  filtered_news: List[FilteredNewsItem] = Field(default_factory=list)
+  # 3단계: DART 공시 검증 완료
+  dart_verified_news: List[VerifiedNewsItem] = Field(default_factory=list)
 
+# --- 포트폴리오 및 거래용 스키마 추가 ---
+class TransactionCreate(BaseModel):
+  stock_code: str
+  stock_name: str
+  market: MarketType
+  transaction_type: TransactionType
+  quantity: float
+  price: float
+  transaction_date: date
+
+  model_config = ConfigDict(use_enum_values=True)
+
+class HoldingItem(BaseModel):
+  stock_code: str
+  stock_name: str
+  market: str
+  quantity: float
+  average_price: float
+  current_price: float = 0
+  valuation: float = 0
+  profit_loss: float = 0
+  return_rate: float = 0
+  days_gain: float = 0
+
+class PortfolioResponse(BaseModel):
+  portfolio: List[HoldingItem]
+  total_assets: float = 0
+  total_profit_loss: float = 0
+  total_return_rate: float = 0
+  total_days_gain: float = 0
+
+class OverseasStockSearchOutput(BaseModel):
+  name: str
+  ticker: str
+
+class OverseasStockSearchResponse(BaseModel):
+  rt_cd: str
+  output: List[OverseasStockSearchOutput] = []

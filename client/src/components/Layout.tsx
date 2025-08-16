@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -18,7 +19,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchModal } from './search-modal';
-import { useState } from 'react';
+import { StockItem } from '@/types/stock';
+import { TradeModal } from './trade-modal';
+import { usePortfolio } from '@/context/PortfolioContext';
 
 const menuItems = [
   { name: 'My Portfolio', href: '/', icon: LayoutDashboard },
@@ -111,7 +114,28 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Search Modal 상태
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  // Trade Modal 상태
+  const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
+  const [selectedStock, setSelectedStock] = useState<
+    (StockItem & { market: 'KOR' | 'OVERSEAS' }) | null
+  >(null);
+
+  // --- Context로부터 포트폴리오 새로고침 함수를 가져옵니다. ---
+  const { fetchPortfolioData } = usePortfolio();
+
+  // --- 🌟 SearchModal에서 종목 클릭 시 호출될 함수 ---
+  const handleStockSelect = (stock: StockItem, market: 'KOR' | 'OVERSEAS') => {
+    setSelectedStock({ ...stock, market });
+    setIsSearchOpen(false); // 검색 모달 닫기
+    setIsTradeModalOpen(true); // 거래 모달 열기
+  };
+
+  // --- 🌟 3. 거래 완료 시 호출될 함수는 이제 Context의 함수를 실행합니다. ---
+  const handleTradeComplete = () => {
+    fetchPortfolioData(); // 전역 데이터를 새로고침
+  };
 
   return (
     // 전체 레이아웃에 테마의 배경색과 글자색을 적용합니다.
@@ -122,8 +146,20 @@ export default function DashboardLayout({
         <main id="main-scroll-area" className="flex-1 overflow-y-auto">
           {children}
         </main>
-        {/* SearchModal 컴포넌트 렌더링 */}
-        <SearchModal isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
+        {/* 🌟 onStockSelect prop을 SearchModal에 전달 */}
+        <SearchModal
+          isOpen={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
+          onStockSelect={handleStockSelect}
+        />
+
+        {/* 🌟 TradeModal 렌더링 */}
+        <TradeModal
+          isOpen={isTradeModalOpen}
+          onOpenChange={setIsTradeModalOpen}
+          stock={selectedStock}
+          onTradeComplete={handleTradeComplete}
+        />
       </div>
     </div>
   );
