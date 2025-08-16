@@ -11,7 +11,7 @@ export interface PortfolioItem {
 }
 
 // 미국 주식 데이터
-export const usStocks: PortfolioItem[] = [
+export const overseasStocks: PortfolioItem[] = [
   {
     ticker: 'VRTX',
     name: 'Vertex Pharmace...',

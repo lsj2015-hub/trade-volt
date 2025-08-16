@@ -6,8 +6,8 @@ import { LayoutDashboard } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { usStocks, koreanStocks } from '@/data/portfolio-data';
-import { getGainColor } from '@/lib/utils';
+import { overseasStocks, koreanStocks } from '@/data/portfolio-data';
+import { formatCurrency, formatPercent, getGainColor } from '@/lib/utils';
 
 import { PortfolioSummaryCard } from './components/portfolio-summary-card';
 import { PortfolioTable } from './components/portfolio-table';
@@ -21,34 +21,23 @@ export default function MyPortfolioPage() {
     daysGain: koreanStocks.reduce((sum, s) => sum + s.daysGain, 0),
     totalGain: koreanStocks.reduce((sum, s) => sum + s.totalGain, 0),
   };
-  const usSummary = {
-    value: usStocks.reduce((sum, s) => sum + s.marketValue, 0),
-    daysGain: usStocks.reduce((sum, s) => sum + s.daysGain, 0),
-    totalGain: usStocks.reduce((sum, s) => sum + s.totalGain, 0),
+  const overseasSummary = {
+    value: overseasStocks.reduce((sum, s) => sum + s.marketValue, 0),
+    daysGain: overseasStocks.reduce((sum, s) => sum + s.daysGain, 0),
+    totalGain: overseasStocks.reduce((sum, s) => sum + s.totalGain, 0),
   };
 
   const totalPortfolioValue =
-    koreanSummary.value + usSummary.value * usdToKrwRate;
+    koreanSummary.value + overseasSummary.value * usdToKrwRate;
   const totalDaysGain =
-    koreanSummary.daysGain + usSummary.daysGain * usdToKrwRate;
+    koreanSummary.daysGain + overseasSummary.daysGain * usdToKrwRate;
   const totalGain =
-    koreanSummary.totalGain + usSummary.totalGain * usdToKrwRate;
+    koreanSummary.totalGain + overseasSummary.totalGain * usdToKrwRate;
 
-  const totalDaysGainPercent =
-    totalPortfolioValue - totalDaysGain !== 0
-      ? (totalDaysGain / (totalPortfolioValue - totalDaysGain)) * 100
-      : 0;
   const totalGainPercent =
     totalPortfolioValue - totalGain !== 0
       ? (totalGain / (totalPortfolioValue - totalGain)) * 100
       : 0;
-
-  const formatKrw = (value: number) =>
-    new Intl.NumberFormat('ko-KR', {
-      style: 'currency',
-      currency: 'KRW',
-    }).format(value);
-
 
   return (
     <div className="p-6 md:p-10 space-y-5">
@@ -62,26 +51,22 @@ export default function MyPortfolioPage() {
       </header>
 
       {/* --- 최상단에 요약 카드 섹션 추가 --- */}
-      <Card className='gap-3'>
-        <CardContent className="p-3">
+      <Card className="gap-2 py-2">
+        <CardContent className="p-5 ml-5">
           <p className="text-4xl font-bold tracking-tighter">
-            {formatKrw(totalPortfolioValue)}
+            {formatCurrency(totalPortfolioValue)}
           </p>
-          <div className="flex items-center gap-2 mt-2">
-            <div
-              className={`text-lg font-semibold ${getGainColor(totalDaysGain)}`}
-            >
-              {totalDaysGain >= 0 ? '+' : ''}
-              {formatKrw(totalDaysGain)}
-              <span className="ml-2">({totalDaysGainPercent.toFixed(2)}%)</span>
+          <div className="flex items-center gap-5 mt-2">
+            <div className={`font-semibold ${getGainColor(totalDaysGain)}`}>
+              {formatCurrency(totalDaysGain)}
+              <span className="ml-2">(1.1%)</span>
               <span className="text-sm text-muted-foreground ml-2">
                 Day&apos;s Gain
               </span>
             </div>
-            <div className={`text-lg font-semibold ${getGainColor(totalGain)}`}>
-              {totalGain >= 0 ? '+' : ''}
-              {formatKrw(totalGain)}
-              <span className="ml-2">({totalGainPercent.toFixed(2)}%)</span>
+            <div className={`font-semibold ${getGainColor(totalGain)}`}>
+              {formatCurrency(totalGain)}
+              <span className="ml-2">({formatPercent(totalGainPercent)})</span>
               <span className="text-sm text-muted-foreground ml-2">
                 Total Gain
               </span>
@@ -89,7 +74,7 @@ export default function MyPortfolioPage() {
           </div>
         </CardContent>
 
-      {/* --- 개별 포트폴리오 요약 카드 섹션 --- */}
+        {/* --- 개별 포트폴리오 요약 카드 섹션 --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-5 mb-5">
           <PortfolioSummaryCard
             title="Korean Stocks Portfolio"
@@ -99,28 +84,27 @@ export default function MyPortfolioPage() {
             currency="KRW"
           />
           <PortfolioSummaryCard
-            title="US Stocks Portfolio"
-            totalMarketValue={usSummary.value}
-            totalDaysGain={usSummary.daysGain}
-            totalGain={usSummary.totalGain}
+            title="Overseas Stocks Portfolio"
+            totalMarketValue={overseasSummary.value}
+            totalDaysGain={overseasSummary.daysGain}
+            totalGain={overseasSummary.totalGain}
             currency="USD"
           />
         </div>
       </Card>
 
-
-      <Card>
+      <Card className="py-2">
         <CardContent className="p-6">
           <Tabs defaultValue="korea">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="korea">My List (KOREA)</TabsTrigger>
-              <TabsTrigger value="usa">My List (USA)</TabsTrigger>
+              <TabsTrigger value="overseas">My List (OVERSEAS)</TabsTrigger>
             </TabsList>
             <TabsContent value="korea" className="mt-4">
               <PortfolioTable stocks={koreanStocks} currency="KRW" />
             </TabsContent>
-            <TabsContent value="usa" className="mt-4">
-              <PortfolioTable stocks={usStocks} currency="USD" />
+            <TabsContent value="overseas" className="mt-4">
+              <PortfolioTable stocks={overseasStocks} currency="USD" />
             </TabsContent>
           </Tabs>
         </CardContent>
