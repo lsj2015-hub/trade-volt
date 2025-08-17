@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     PERFORMANCE_MAX_TICKERS: int = 1000
     PERFORMANCE_CHUNK_SIZE: int = 50
     PERFORMANCE_TIMEOUT: int = 5
+    PERFORMANCE_MAX_CHUNKS: int = 20
 
     # stock_list.json 경로 지정
     STOCK_LIST_JSON: str | None = None

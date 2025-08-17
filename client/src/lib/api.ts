@@ -222,15 +222,131 @@ export const analyzeSectors = (
  * 시장 성과 분석을 요청합니다.
  * @param requestData - 국가, 시장, 기간, 종목 수를 포함하는 객체
  */
-export const analyzePerformance = (
+/**
+ * 시장 성과 분석을 요청합니다. (임시 데이터 반환)
+ * @param requestData - 국가, 시장, 기간, 종목 수를 포함하는 객체
+ */
+export const analyzePerformance = async (
   requestData: PerformanceAnalysisRequest
 ): Promise<PerformanceAnalysisResponse> => {
-  return fetchAPI(`${API_BASE_URL}/api/performance/analysis`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestData),
-  });
+  // 서버 호출 대신 임시 데이터 반환
+  await new Promise((resolve) => setTimeout(resolve, 1500)); // 로딩 시뮬레이션
+
+  console.log('Performance analysis request:', requestData);
+
+  // 시장별 다른 데이터 반환
+  const mockData: PerformanceAnalysisResponse = {
+    top_performers: generateMockPerformers(
+      requestData.market,
+      'top',
+      requestData.top_n
+    ),
+    bottom_performers: generateMockPerformers(
+      requestData.market,
+      'bottom',
+      requestData.top_n
+    ),
+    total_analyzed: Math.floor(Math.random() * 500) + 200,
+    analysis_period: `${requestData.start_date} ~ ${requestData.end_date}`,
+    market: requestData.market,
+    cache_hit: false,
+    processing_time: Math.random() * 3 + 1,
+  };
+
+  return mockData;
 };
+
+// 임시 데이터 생성 함수
+function generateMockPerformers(
+  market: string,
+  type: 'top' | 'bottom',
+  count: number
+) {
+  const performers = [];
+
+  // 시장별 종목 템플릿
+  const stockTemplates = {
+    KOSPI: [
+      { ticker: '005930', name: '삼성전자' },
+      { ticker: '000660', name: 'SK하이닉스' },
+      { ticker: '035420', name: 'NAVER' },
+      { ticker: '051910', name: 'LG화학' },
+      { ticker: '006400', name: '삼성SDI' },
+      { ticker: '207940', name: '삼성바이오로직스' },
+      { ticker: '068270', name: '셀트리온' },
+      { ticker: '035720', name: '카카오' },
+      { ticker: '003670', name: '포스코홀딩스' },
+      { ticker: '028260', name: '삼성물산' },
+    ],
+    KOSDAQ: [
+      { ticker: '293490', name: '카카오게임즈' },
+      { ticker: '086900', name: '메디톡스' },
+      { ticker: '196170', name: '알테오젠' },
+      { ticker: '361610', name: 'SK아이이테크놀로지' },
+      { ticker: '348210', name: '넥스틴' },
+      { ticker: '393890', name: '더존비즈온' },
+      { ticker: '263750', name: '펄어비스' },
+      { ticker: '357780', name: '솔브레인' },
+      { ticker: '140860', name: '파크시스템스' },
+      { ticker: '225570', name: '넥슨게임즈' },
+    ],
+    NASDAQ: [
+      { ticker: 'AAPL', name: 'Apple Inc.' },
+      { ticker: 'MSFT', name: 'Microsoft Corporation' },
+      { ticker: 'GOOGL', name: 'Alphabet Inc.' },
+      { ticker: 'AMZN', name: 'Amazon.com Inc.' },
+      { ticker: 'TSLA', name: 'Tesla Inc.' },
+      { ticker: 'META', name: 'Meta Platforms Inc.' },
+      { ticker: 'NVDA', name: 'NVIDIA Corporation' },
+      { ticker: 'NFLX', name: 'Netflix Inc.' },
+      { ticker: 'ADBE', name: 'Adobe Inc.' },
+      { ticker: 'CRM', name: 'Salesforce Inc.' },
+    ],
+    NYSE: [
+      { ticker: 'JPM', name: 'JPMorgan Chase & Co.' },
+      { ticker: 'JNJ', name: 'Johnson & Johnson' },
+      { ticker: 'V', name: 'Visa Inc.' },
+      { ticker: 'PG', name: 'Procter & Gamble Co.' },
+      { ticker: 'UNH', name: 'UnitedHealth Group Inc.' },
+      { ticker: 'HD', name: 'Home Depot Inc.' },
+      { ticker: 'MA', name: 'Mastercard Inc.' },
+      { ticker: 'DIS', name: 'Walt Disney Co.' },
+      { ticker: 'PYPL', name: 'PayPal Holdings Inc.' },
+      { ticker: 'BAC', name: 'Bank of America Corp.' },
+    ],
+  };
+
+  const templates =
+    stockTemplates[market as keyof typeof stockTemplates] ||
+    stockTemplates.NASDAQ;
+
+  for (let i = 0; i < Math.min(count, templates.length); i++) {
+    const template = templates[i];
+
+    // 상위/하위에 따른 수익률 범위 설정
+    let performance: number;
+    if (type === 'top') {
+      performance = Math.random() * 30 + 5; // 5% ~ 35%
+    } else {
+      performance = -(Math.random() * 25 + 5); // -5% ~ -30%
+    }
+
+    performers.push({
+      ticker: template.ticker,
+      name: template.name,
+      performance: Math.round(performance * 100) / 100,
+    });
+  }
+
+  // 수익률 기준 정렬
+  if (type === 'top') {
+    performers.sort((a, b) => b.performance - a.performance);
+  } else {
+    performers.sort((a, b) => a.performance - b.performance);
+  }
+
+  return performers;
+}
 
 /**
  * 여러 주식의 수익률을 비교 분석합니다.

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import ValidationInfo
 from typing import List, Optional, Dict, Any
 from datetime import date, datetime
 
@@ -196,6 +197,7 @@ class PerformanceAnalysisRequest(BaseModel):
   top_n: int = Field(20, description="상위/하위 개수", ge=1, le=50)
   
   @field_validator('market')
+  @classmethod
   def validate_market(cls, v):
     allowed_markets = ['KOSPI', 'KOSDAQ', 'NASDAQ', 'NYSE', 'S&P500']
     if v.upper() not in allowed_markets:
@@ -203,6 +205,7 @@ class PerformanceAnalysisRequest(BaseModel):
     return v.upper()
   
   @field_validator('start_date', 'end_date')
+  @classmethod
   def validate_date_format(cls, v):
     try:
       datetime.strptime(v, '%Y-%m-%d')
@@ -211,9 +214,11 @@ class PerformanceAnalysisRequest(BaseModel):
       raise ValueError('날짜는 YYYY-MM-DD 형식이어야 합니다.')
   
   @field_validator('end_date')
-  def validate_date_range(cls, v, values):
-    if 'start_date' in values:
-      start = datetime.strptime(values['start_date'], '%Y-%m-%d')
+  @classmethod
+  def validate_date_range(cls, v, info: ValidationInfo):
+    """Pydantic v2 호환 버전 - ValidationInfo 사용"""
+    if info.data and 'start_date' in info.data:
+      start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
       end = datetime.strptime(v, '%Y-%m-%d')
       
       if end <= start:
@@ -281,7 +286,7 @@ class StockComparisonDataPoint(BaseModel):
 class StockComparisonSeries(BaseModel):
   dataKey: str
   name: str
-  
+
 class StockComparisonResponse(BaseModel):
   data: List[StockComparisonDataPoint]
   series: List[StockComparisonSeries]
@@ -392,4 +397,3 @@ class NewsSearchResponse(BaseModel):
     filtered_news: List[FilteredNewsItem] = Field(default_factory=list)
     # 3단계: DART 공시 검증 완료
     dart_verified_news: List[VerifiedNewsItem] = Field(default_factory=list)
-
