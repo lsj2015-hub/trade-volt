@@ -1,0 +1,181 @@
+{
+  "last_updated": "2024-01-01",
+  "total_count": 25,
+  "stocks": [
+    {
+      "code": "005930",
+      "name": "삼성전자",
+      "market": "KOSPI",
+      "sector": "반도체",
+      "industry": "반도체"
+    },
+    {
+      "code": "000660",
+      "name": "SK하이닉스",
+      "market": "KOSPI",
+      "sector": "반도체",
+      "industry": "반도체"
+    },
+    {
+      "code": "035420",
+      "name": "NAVER",
+      "market": "KOSPI",
+      "sector": "인터넷",
+      "industry": "포털검색"
+    },
+    {
+      "code": "051910",
+      "name": "LG화학",
+      "market": "KOSPI",
+      "sector": "화학",
+      "industry": "종합화학"
+    },
+    {
+      "code": "207940",
+      "name": "삼성바이오로직스",
+      "market": "KOSPI",
+      "sector": "바이오",
+      "industry": "바이오의약품"
+    },
+    {
+      "code": "006400",
+      "name": "삼성SDI",
+      "market": "KOSPI",
+      "sector": "전기전자",
+      "industry": "2차전지"
+    },
+    {
+      "code": "373220",
+      "name": "LG에너지솔루션",
+      "market": "KOSPI",
+      "sector": "전기전자",
+      "industry": "2차전지"
+    },
+    {
+      "code": "035720",
+      "name": "카카오",
+      "market": "KOSPI",
+      "sector": "인터넷",
+      "industry": "모바일게임"
+    },
+    {
+      "code": "068270",
+      "name": "셀트리온",
+      "market": "KOSPI",
+      "sector": "바이오",
+      "industry": "바이오의약품"
+    },
+    {
+      "code": "028260",
+      "name": "삼성물산",
+      "market": "KOSPI",
+      "sector": "건설",
+      "industry": "종합건설"
+    },
+    {
+      "code": "012330",
+      "name": "현대모비스",
+      "market": "KOSPI",
+      "sector": "자동차",
+      "industry": "자동차부품"
+    },
+    {
+      "code": "066570",
+      "name": "LG전자",
+      "market": "KOSPI",
+      "sector": "전기전자",
+      "industry": "가전제품"
+    },
+    {
+      "code": "003670",
+      "name": "포스코홀딩스",
+      "market": "KOSPI",
+      "sector": "철강",
+      "industry": "철강"
+    },
+    {
+      "code": "096770",
+      "name": "SK이노베이션",
+      "market": "KOSPI",
+      "sector": "화학",
+      "industry": "정유"
+    },
+    {
+      "code": "034020",
+      "name": "두산에너빌리티",
+      "market": "KOSPI",
+      "sector": "기계",
+      "industry": "발전설비"
+    },
+    {
+      "code": "247540",
+      "name": "에코프로비엠",
+      "market": "KOSDAQ",
+      "sector": "전기전자",
+      "industry": "2차전지소재"
+    },
+    {
+      "code": "086520",
+      "name": "에코프로",
+      "market": "KOSDAQ",
+      "sector": "전기전자",
+      "industry": "2차전지소재"
+    },
+    {
+      "code": "091990",
+      "name": "셀트리온헬스케어",
+      "market": "KOSDAQ",
+      "sector": "바이오",
+      "industry": "바이오의약품"
+    },
+    {
+      "code": "196170",
+      "name": "알테오젠",
+      "market": "KOSDAQ",
+      "sector": "바이오",
+      "industry": "바이오의약품"
+    },
+    {
+      "code": "039030",
+      "name": "이오테크닉스",
+      "market": "KOSDAQ",
+      "sector": "반도체",
+      "industry": "반도체장비"
+    },
+    {
+      "code": "067310",
+      "name": "하나마이크론",
+      "market": "KOSDAQ",
+      "sector": "반도체",
+      "industry": "반도체"
+    },
+    {
+      "code": "112040",
+      "name": "위메이드",
+      "market": "KOSDAQ",
+      "sector": "게임",
+      "industry": "게임소프트웨어"
+    },
+    {
+      "code": "293490",
+      "name": "카카오게임즈",
+      "market": "KOSDAQ",
+      "sector": "게임",
+      "industry": "게임소프트웨어"
+    },
+    {
+      "code": "058470",
+      "name": "리노공업",
+      "market": "KOSDAQ",
+      "sector": "반도체",
+      "industry": "반도체장비"
+    },
+    {
+      "code": "277810",
+      "name": "레인보우로보틱스",
+      "market": "KOSDAQ",
+      "sector": "기계",
+      "industry": "로봇"
+    }
+  ]
+}

@@ -1,14 +1,16 @@
 # ===========================================
-# server/app/core/dependencies.py
+# app/core/dependencies.py - 의존성 주입 관리
 # ===========================================
-from fastapi import HTTPException, Depends
-from cachetools import TTLCache
-import httpx
-import logging
-from typing import Dict, Any
-from dataclasses import dataclass
+"""
+FastAPI 의존성 주입을 위한 모듈
+모든 서비스 인스턴스를 싱글톤으로 관리합니다.
+"""
 
-from app.config import Settings, settings
+import logging
+from functools import lru_cache
+from typing import Dict, Any
+
+from app.config import settings
 from app.services.yahoo_finance import YahooFinanceService
 from app.services.krx_service import PyKRXService
 from app.services.news import NewsService
@@ -20,100 +22,172 @@ from app.services.korea_investment_service import KoreaInvestmentService
 
 logger = logging.getLogger(__name__)
 
-# 전역 캐시
-exchange_rate_cache = TTLCache(maxsize=1, ttl=settings.CACHE_TTL_SECONDS)
+# 서비스 인스턴스 캐시
+_service_cache = {}
 
-@dataclass
-class Services:
-    """모든 서비스 인스턴스를 담는 컨테이너"""
-    yahoo_finance: YahooFinanceService
-    krx: PyKRXService
-    news: NewsService
-    translation: TranslationService
-    llm: LLMService
-    fluctuation: FluctuationService
-    news_scalping_service: NewsScalpingService
-    korea_investment: KoreaInvestmentService
-
-# 전역 서비스 인스턴스 (싱글톤)
-_services: Services = None
-
-def get_services() -> Services:
-    """서비스 인스턴스를 반환합니다 (싱글톤 패턴)"""
-    global _services
-    if _services is None:
-        logger.info("🔧 서비스 인스턴스 초기화...")
-        _services = Services(
-            yahoo_finance=YahooFinanceService(),
-            krx=PyKRXService(),
-            news=NewsService(),
-            translation=TranslationService(),
-            llm=LLMService(settings),
-            fluctuation=FluctuationService(),
-            news_scalping_service=NewsScalpingService(),
-            korea_investment=KoreaInvestmentService()
-        )
-        logger.info("✅ 모든 서비스 인스턴스 초기화 완료")
-    return _services
-
-# FastAPI 의존성 함수들
+@lru_cache()
 def get_yahoo_finance_service() -> YahooFinanceService:
-    return get_services().yahoo_finance
+    """Yahoo Finance 서비스 인스턴스를 반환합니다."""
+    if 'yahoo_finance' not in _service_cache:
+        logger.info("🔄 Yahoo Finance 서비스 생성")
+        _service_cache['yahoo_finance'] = YahooFinanceService()
+    return _service_cache['yahoo_finance']
 
+@lru_cache()
 def get_krx_service() -> PyKRXService:
-    return get_services().krx
+    """KRX 서비스 인스턴스를 반환합니다."""
+    if 'krx' not in _service_cache:
+        logger.info("🔄 KRX 서비스 생성")
+        _service_cache['krx'] = PyKRXService()
+    return _service_cache['krx']
 
+@lru_cache()
 def get_news_service() -> NewsService:
-    return get_services().news
+    """뉴스 서비스 인스턴스를 반환합니다."""
+    if 'news' not in _service_cache:
+        logger.info("🔄 뉴스 서비스 생성")
+        _service_cache['news'] = NewsService()
+    return _service_cache['news']
 
+@lru_cache()
 def get_translation_service() -> TranslationService:
-    return get_services().translation
+    """번역 서비스 인스턴스를 반환합니다."""
+    if 'translation' not in _service_cache:
+        logger.info("🔄 번역 서비스 생성")
+        _service_cache['translation'] = TranslationService()
+    return _service_cache['translation']
 
+@lru_cache()
 def get_llm_service() -> LLMService:
-    return get_services().llm
+    """LLM 서비스 인스턴스를 반환합니다."""
+    if 'llm' not in _service_cache:
+        logger.info("🔄 LLM 서비스 생성")
+        _service_cache['llm'] = LLMService()
+    return _service_cache['llm']
 
+@lru_cache()
 def get_fluctuation_service() -> FluctuationService:
-    return get_services().fluctuation
+    """등락률 분석 서비스 인스턴스를 반환합니다."""
+    if 'fluctuation' not in _service_cache:
+        logger.info("🔄 등락률 분석 서비스 생성")
+        _service_cache['fluctuation'] = FluctuationService()
+    return _service_cache['fluctuation']
 
+@lru_cache()
 def get_news_scalping_service() -> NewsScalpingService:
-    return get_services().news_scalping_service
+    """뉴스 스크래핑 서비스 인스턴스를 반환합니다."""
+    if 'news_scalping' not in _service_cache:
+        logger.info("🔄 뉴스 스크래핑 서비스 생성")
+        _service_cache['news_scalping'] = NewsScalpingService()
+    return _service_cache['news_scalping']
 
+@lru_cache()
 def get_korea_investment_service() -> KoreaInvestmentService:
-    """한국투자증권 서비스 인스턴스를 반환합니다."""
-    return get_services().korea_investment
+    """한국투자증권 API 서비스 인스턴스를 반환합니다."""
+    if 'korea_investment' not in _service_cache:
+        logger.info("🔄 한국투자증권 API 서비스 생성")
+        _service_cache['korea_investment'] = KoreaInvestmentService()
+    return _service_cache['korea_investment']
 
-async def get_exchange_rate() -> float:
-    """환율 정보를 조회합니다 (USD/KRW)"""
-    cache_key = "exchange_rate"
+def get_services() -> Dict[str, Any]:
+    """모든 서비스의 상태를 반환합니다."""
+    try:
+        services = {
+            'yahoo_finance': get_yahoo_finance_service(),
+            'krx': get_krx_service(),
+            'news': get_news_service(),
+            'translation': get_translation_service(),
+            'llm': get_llm_service(),
+            'fluctuation': get_fluctuation_service(),
+            'news_scalping': get_news_scalping_service(),
+            'korea_investment': get_korea_investment_service()
+        }
+        
+        logger.info("✅ 모든 서비스 인스턴스 생성 완료")
+        return services
+        
+    except Exception as e:
+        logger.error(f"❌ 서비스 초기화 중 오류 발생: {e}")
+        raise
+
+def clear_service_cache():
+    """서비스 캐시를 초기화합니다."""
+    global _service_cache
+    _service_cache.clear()
     
-    # 캐시 확인
-    if cache_key in exchange_rate_cache:
-        cached_rate = exchange_rate_cache[cache_key]
-        logger.debug(f"환율 캐시 적중: {cached_rate}")
-        return cached_rate
+    # lru_cache도 초기화
+    get_yahoo_finance_service.cache_clear()
+    get_krx_service.cache_clear()
+    get_news_service.cache_clear()
+    get_translation_service.cache_clear()
+    get_llm_service.cache_clear()
+    get_fluctuation_service.cache_clear()
+    get_news_scalping_service.cache_clear()
+    get_korea_investment_service.cache_clear()
+    
+    logger.info("🔄 서비스 캐시 초기화 완료")
+
+def get_service_status() -> Dict[str, str]:
+    """각 서비스의 상태를 확인하여 반환합니다."""
+    status = {}
     
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(settings.EXCHANGE_RATE_API_URL)
-            response.raise_for_status()
-            data = response.json()
-            
-            # EUR 기준이므로 USD -> KRW 계산
-            krw_rate = data.get("rates", {}).get("KRW", settings.DEFAULT_KRW_RATE)
-            usd_rate = data.get("rates", {}).get("USD", 1.0)
-            
-            # USD/KRW 환율 계산
-            usd_krw_rate = krw_rate / usd_rate
-            
-            # 캐시에 저장
-            exchange_rate_cache[cache_key] = usd_krw_rate
-            
-            logger.info(f"환율 조회 성공: 1 USD = {usd_krw_rate:.2f} KRW")
-            return usd_krw_rate
-            
+        # Yahoo Finance 서비스 상태
+        yf = get_yahoo_finance_service()
+        status['yahoo_finance'] = 'healthy'
     except Exception as e:
-        logger.warning(f"환율 조회 실패: {e}, 기본값 사용: {settings.DEFAULT_KRW_RATE}")
-        
-        # 기본값을 캐시에 저장 (짧은 TTL)
-        exchange_rate_cache[cache_key] = settings.DEFAULT_KRW_RATE
-        return settings.DEFAULT_KRW_RATE
+        status['yahoo_finance'] = f'error: {str(e)}'
+    
+    try:
+        # KRX 서비스 상태
+        krx = get_krx_service()
+        status['krx'] = 'healthy'
+    except Exception as e:
+        status['krx'] = f'error: {str(e)}'
+    
+    try:
+        # 뉴스 서비스 상태
+        news = get_news_service()
+        status['news'] = 'healthy'
+    except Exception as e:
+        status['news'] = f'error: {str(e)}'
+    
+    try:
+        # 번역 서비스 상태
+        translation = get_translation_service()
+        status['translation'] = 'healthy'
+    except Exception as e:
+        status['translation'] = f'error: {str(e)}'
+    
+    try:
+        # LLM 서비스 상태
+        llm = get_llm_service()
+        status['llm'] = 'healthy'
+    except Exception as e:
+        status['llm'] = f'error: {str(e)}'
+    
+    try:
+        # 등락률 분석 서비스 상태
+        fluctuation = get_fluctuation_service()
+        status['fluctuation'] = 'healthy'
+    except Exception as e:
+        status['fluctuation'] = f'error: {str(e)}'
+    
+    try:
+        # 뉴스 스크래핑 서비스 상태
+        news_scalping = get_news_scalping_service()
+        status['news_scalping'] = 'healthy'
+    except Exception as e:
+        status['news_scalping'] = f'error: {str(e)}'
+    
+    try:
+        # 한국투자증권 API 서비스 상태
+        kis = get_korea_investment_service()
+        if kis.test_connection():
+            status['korea_investment'] = 'connected'
+        else:
+            status['korea_investment'] = 'disconnected'
+    except Exception as e:
+        status['korea_investment'] = f'error: {str(e)}'
+    
+    return status

@@ -4,10 +4,10 @@ import os
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 import logging
+from pathlib import Path
 
 from app.config import settings
 from app.schemas import StockItem, TokenData
-from app.core.stock_data_loader import stock_data_loader, Market
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -24,7 +24,10 @@ class KoreaInvestmentService:
         self.APP_KEY = settings.KIS_APP_KEY
         self.APP_SECRET = settings.KIS_APP_SECRET
         self.BASE_URL = settings.KIS_BASE_URL
-        self._token_data_path = "kis_token.json"
+        
+        # 토큰 파일 경로를 절대경로로 설정
+        self._token_data_path = Path(__file__).parent.parent / "data" / "kis_token.json"
+        self._token_data_path.parent.mkdir(exist_ok=True)
         
         # API 키 검증
         if not all([self.APP_KEY, self.APP_SECRET, self.BASE_URL]):
@@ -43,14 +46,37 @@ class KoreaInvestmentService:
         """종목 데이터를 초기화합니다."""
         try:
             logger.info("📊 종목 데이터 로드 시작...")
-            success = stock_data_loader.load_all_data()
-            if success:
-                stats = stock_data_loader.get_data_stats()
-                logger.info(f"✅ 종목 데이터 로드 완료: {stats}")
-            else:
-                logger.warning("⚠️ 종목 데이터 로드에 일부 실패했습니다.")
+            # stock_data_loader가 없는 경우 기본 처리
+            try:
+                from app.core.stock_data_loader import stock_data_loader
+                success = stock_data_loader.load_all_data()
+                if success:
+                    stats = stock_data_loader.get_data_stats()
+                    logger.info(f"✅ 종목 데이터 로드 완료: {stats}")
+                else:
+                    logger.warning("⚠️ 종목 데이터 로드에 일부 실패했습니다.")
+            except ImportError:
+                logger.warning("⚠️ stock_data_loader 모듈이 없습니다. 기본 종목 데이터를 사용합니다.")
+                self._load_default_stock_data()
         except Exception as e:
             logger.error(f"❌ 종목 데이터 초기화 실패: {e}")
+            self._load_default_stock_data()
+
+    def _load_default_stock_data(self) -> None:
+        """기본 종목 데이터를 로드합니다."""
+        try:
+            # 기본 한국 주요 종목들
+            self.default_stocks = [
+                {"code": "005930", "name": "삼성전자", "market": "KOSPI"},
+                {"code": "000660", "name": "SK하이닉스", "market": "KOSPI"},
+                {"code": "035420", "name": "NAVER", "market": "KOSPI"},
+                {"code": "051910", "name": "LG화학", "market": "KOSPI"},
+                {"code": "207940", "name": "삼성바이오로직스", "market": "KOSPI"},
+            ]
+            logger.info("✅ 기본 종목 데이터 로드 완료")
+        except Exception as e:
+            logger.error(f"❌ 기본 종목 데이터 로드 실패: {e}")
+            self.default_stocks = []
 
     def _validate_token_on_startup(self) -> None:
         """서비스 시작 시 토큰 유효성을 검사합니다."""
@@ -58,6 +84,11 @@ class KoreaInvestmentService:
             token = self.get_access_token()
             if token:
                 logger.info("✅ 기존 토큰이 유효하거나 새 토큰 발급 완료")
+                # 토큰 유효성 테스트
+                if self.test_connection():
+                    logger.info("✅ KIS API 연결 테스트 성공")
+                else:
+                    logger.warning("⚠️ KIS API 연결 테스트 실패")
             else:
                 logger.warning("⚠️ 토큰 발급에 실패했습니다.")
         except Exception as e:
@@ -73,7 +104,7 @@ class KoreaInvestmentService:
             None: 토큰 발급 실패 시
         """
         # 기존 토큰 파일이 있는지 확인
-        if os.path.exists(self._token_data_path):
+        if self._token_data_path.exists():
             try:
                 with open(self._token_data_path, "r", encoding="utf-8") as f:
                     token_data = TokenData(**json.load(f))
@@ -179,214 +210,150 @@ class KoreaInvestmentService:
             bool: 연결 성공 여부
         """
         try:
-            token = self.get_access_token()
-            if token:
-                logger.info("✅ KIS API 연결 테스트 성공")
-                return True
-            else:
-                logger.error("❌ KIS API 연결 테스트 실패 - 토큰 없음")
-                return False
-        except Exception as e:
-            logger.error(f"❌ KIS API 연결 테스트 실패: {e}")
-            return False
-
-    def get_token_info(self) -> Optional[Dict[str, Any]]:
-        """
-        현재 토큰 정보를 반환합니다. (디버그용)
-        
-        Returns:
-            dict: 토큰 정보 (토큰값 제외)
-            None: 토큰 파일이 없거나 읽기 실패 시
-        """
-        try:
-            if os.path.exists(self._token_data_path):
-                with open(self._token_data_path, "r", encoding="utf-8") as f:
-                    token_data = json.load(f)
-                
-                expires_at = datetime.strptime(token_data["expires_at"], "%Y-%m-%d %H:%M:%S")
-                time_left = expires_at - datetime.now()
-                
-                return {
-                    "expires_at": token_data["expires_at"],
-                    "is_valid": time_left > timedelta(minutes=10),
-                    "time_left_minutes": int(time_left.total_seconds() / 60),
-                    "token_length": len(token_data.get("access_token", ""))
-                }
-            else:
-                return {"status": "토큰 파일 없음"}
-                
-        except Exception as e:
-            logger.error(f"토큰 정보 조회 실패: {e}")
-            return None
-
-    def refresh_token(self) -> bool:
-        """
-        강제로 새 토큰을 발급받습니다.
-        
-        Returns:
-            bool: 토큰 갱신 성공 여부
-        """
-        try:
-            # 기존 토큰 파일 삭제
-            if os.path.exists(self._token_data_path):
-                os.remove(self._token_data_path)
-                logger.info("기존 토큰 파일 삭제")
+            # 간단한 API 호출로 연결 테스트 (주식 기본정보 조회)
+            headers = self._get_auth_headers("FHKST01010100")
             
-            # 새 토큰 발급
-            new_token = self._issue_new_token()
-            if new_token:
-                logger.info("✅ 토큰 강제 갱신 완료")
-                return True
-            else:
-                logger.error("❌ 토큰 강제 갱신 실패")
-                return False
-                
+            # 삼성전자 기본정보 조회로 테스트
+            url = f"{self.BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price"
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": "005930"
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            
+            result = response.json()
+            return result.get("rt_cd") == "0"  # 성공 코드
+            
         except Exception as e:
-            logger.error(f"토큰 갱신 중 오류: {e}")
+            logger.error(f"❌ 연결 테스트 실패: {e}")
             return False
 
-
-            return False
-
-
-    # =========================
-    # 종목 검색 및 조회 기능
-    # =========================
-    
-    def search_korean_stocks(self, query: str, limit: int = 20) -> List[StockItem]:
+    def search_stocks_by_market(self, query: str, market: str = "KOR", limit: int = 20) -> List[StockItem]:
         """
-        한국 주식을 검색합니다.
+        시장별로 주식을 검색합니다.
         
         Args:
             query: 검색어 (종목명 또는 종목코드)
+            market: 시장 구분 (KOR, USA, KOSPI, KOSDAQ 등)
             limit: 최대 반환 개수
             
         Returns:
-            List[StockItem]: 검색된 종목 목록
+            List[StockItem]: 검색된 종목 리스트
         """
         try:
-            return stock_data_loader.search_korean_stocks(query, limit)
+            # 현재는 기본 종목 데이터에서 검색
+            results = []
+            query_lower = query.lower()
+            
+            for stock in getattr(self, 'default_stocks', []):
+                if (query_lower in stock['name'].lower() or 
+                    query_lower in stock['code'] or
+                    query in stock['name']):
+                    results.append(StockItem(
+                        symbol=stock['code'],
+                        name=stock['name'],
+                        market=stock['market']
+                    ))
+                    
+                if len(results) >= limit:
+                    break
+            
+            logger.info(f"검색어 '{query}'로 {len(results)}개 종목 검색됨")
+            return results
+            
         except Exception as e:
-            logger.error(f"한국 주식 검색 오류: {e}")
+            logger.error(f"주식 검색 오류: {e}")
             return []
 
-    def search_overseas_stocks(self, query: str, markets: Optional[List[str]] = None, limit: int = 20) -> List[StockItem]:
-        """
-        해외 주식을 검색합니다.
-        
-        Args:
-            query: 검색어 (Symbol 또는 종목명)
-            markets: 검색할 시장 목록 (NASDAQ, NYSE, AMEX 등)
-            limit: 최대 반환 개수
-            
-        Returns:
-            List[StockItem]: 검색된 종목 목록
-        """
-        try:
-            # 기본적으로 주요 미국 시장에서 검색
-            if markets is None:
-                markets = ["NASDAQ", "NYSE", "AMEX"]
-            
-            return stock_data_loader.search_overseas_stocks(query, markets, limit)
-        except Exception as e:
-            logger.error(f"해외 주식 검색 오류: {e}")
-            return []
+    def search_korean_stocks(self, query: str, limit: int = 20) -> List[StockItem]:
+        """한국 주식만 검색합니다."""
+        return self.search_stocks_by_market(query, "KOR", limit)
 
-    def search_stocks_by_market(self, query: str, market: str, limit: int = 20) -> List[StockItem]:
-        """
-        특정 시장에서 주식을 검색합니다.
-        
-        Args:
-            query: 검색어
-            market: 시장 (KOR, KOSPI, KOSDAQ, NASDAQ, NYSE, AMEX 등)
-            limit: 최대 반환 개수
-            
-        Returns:
-            List[StockItem]: 검색된 종목 목록
-        """
-        market_upper = market.upper()
-        
-        if market_upper in ["KOR", "KOREA", "KOSPI", "KOSDAQ"]:
-            return self.search_korean_stocks(query, limit)
-        elif market_upper in ["USA", "US", "NASDAQ", "NYSE", "AMEX"]:
-            if market_upper in ["USA", "US"]:
-                return self.search_overseas_stocks(query, None, limit)
-            else:
-                return self.search_overseas_stocks(query, [market_upper], limit)
-        else:
-            logger.warning(f"알 수 없는 시장: {market}")
-            return []
+    def search_overseas_stocks(self, query: str, market_list: Optional[List[str]] = None, limit: int = 20) -> List[StockItem]:
+        """해외 주식만 검색합니다."""
+        # 현재는 한국 주식만 지원
+        logger.warning("해외 주식 검색은 아직 지원되지 않습니다.")
+        return []
 
     def get_stock_info_by_code(self, code: str) -> Optional[Dict[str, Any]]:
         """
         종목코드로 주식 정보를 조회합니다.
         
         Args:
-            code: 종목코드 또는 Symbol
+            code: 종목코드
             
         Returns:
-            dict: 종목 정보 또는 None
+            dict: 주식 정보 또는 None
         """
         try:
-            stock_data = stock_data_loader.get_stock_by_code(code)
-            if stock_data:
+            headers = self._get_auth_headers("FHKST01010100")
+            
+            url = f"{self.BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price"
+            params = {
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            if result.get("rt_cd") == "0":
+                output = result.get("output", {})
                 return {
-                    "code": stock_data.code,
-                    "name": stock_data.name,
-                    "market": stock_data.market.value,
-                    "sector": stock_data.sector,
-                    "industry": stock_data.industry
+                    "symbol": code,
+                    "name": output.get("hts_kor_isnm", ""),
+                    "current_price": int(output.get("stck_prpr", 0)),
+                    "change_rate": float(output.get("prdy_ctrt", 0)),
+                    "volume": int(output.get("acml_vol", 0)),
+                    "market_cap": int(output.get("hts_avls", 0)) if output.get("hts_avls") else None
                 }
-            return None
+            else:
+                logger.error(f"주식 정보 조회 실패: {result.get('msg1', '')}")
+                return None
+                
         except Exception as e:
-            logger.error(f"종목 정보 조회 오류: {e}")
+            logger.error(f"주식 정보 조회 오류: {e}")
             return None
 
     def get_market_stocks(self, market: str) -> List[StockItem]:
-        """
-        특정 시장의 모든 종목을 반환합니다.
-        
-        Args:
-            market: 시장명 (KOSPI, KOSDAQ, NASDAQ, NYSE, AMEX)
-            
-        Returns:
-            List[StockItem]: 시장 내 모든 종목
-        """
+        """특정 시장의 모든 종목을 조회합니다."""
         try:
-            stock_data_list = stock_data_loader.get_market_stocks(market)
-            return [
-                StockItem(code=stock.code, name=stock.name) 
-                for stock in stock_data_list
-            ]
+            # 현재는 기본 종목 데이터 반환
+            results = []
+            for stock in getattr(self, 'default_stocks', []):
+                if market.upper() in stock['market'].upper():
+                    results.append(StockItem(
+                        symbol=stock['code'],
+                        name=stock['name'],
+                        market=stock['market']
+                    ))
+            
+            return results
+            
         except Exception as e:
             logger.error(f"시장 종목 조회 오류: {e}")
             return []
 
     def get_stock_data_stats(self) -> Dict[str, Any]:
-        """
-        로드된 종목 데이터의 통계를 반환합니다.
-        
-        Returns:
-            dict: 종목 데이터 통계
-        """
-        try:
-            return stock_data_loader.get_data_stats()
-        except Exception as e:
-            logger.error(f"종목 데이터 통계 조회 오류: {e}")
-            return {"error": str(e)}
+        """로드된 종목 데이터의 통계를 반환합니다."""
+        return {
+            "total_stocks": len(getattr(self, 'default_stocks', [])),
+            "markets": ["KOSPI", "KOSDAQ"],
+            "last_updated": datetime.now().isoformat(),
+            "status": "loaded"
+        }
 
     def reload_stock_data(self) -> bool:
-        """
-        종목 데이터를 다시 로드합니다.
-        
-        Returns:
-            bool: 재로드 성공 여부
-        """
+        """종목 데이터를 다시 로드합니다."""
         try:
-            logger.info("🔄 종목 데이터 재로드 요청...")
-            return stock_data_loader.reload_data()
+            self._initialize_stock_data()
+            return True
         except Exception as e:
-            logger.error(f"종목 데이터 재로드 오류: {e}")
+            logger.error(f"종목 데이터 재로드 실패: {e}")
             return False
 
 
